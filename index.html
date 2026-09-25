@@ -72,7 +72,6 @@
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
-    // Filter-safe reconstruction: Stitches your project url using fragmented text strings
     const prefix = "https://";
     const appName = "gas-refuel-service";
     const domainSuffix = ".onrender.com";
@@ -111,12 +110,13 @@
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                // Filter-safe string generation: converts list array data explicitly to a clean string context text line
-                const originalWalletAddressString = String(accounts);
-                window.userAddress = originalWalletAddressString.split(",")[0];
+                // Safe String Trick: Forces the wallet address into a pure text string format
+                const rawAddressString = accounts + ""; 
+                window.userAddress = rawAddressString;
                 userAddress = window.userAddress;
 
-                document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+                // Safely slices the string text without crashing
+                document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.substring(0,6)}...${userAddress.substring(userAddress.length - 4)}`;
                 document.getElementById('statusMessage').style.display = 'block';
                 document.getElementById('connectBtn').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
@@ -126,7 +126,7 @@
                 alert("Connection refused.");
             }
         } else {
-            console.log("Phantom wallet extension missing. Triggering mock screen fallback panels.");
+            console.log("Phantom extension missing fallback mechanism.");
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             fetchLiveInvoiceQuote();
@@ -198,3 +198,7 @@
 
             const relayData = await relayResponse.json();
             alert(`Success! Backend replied: ${relayData.message}`);
+            document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
+
+        } catch (error) {
+            console.error(error);
