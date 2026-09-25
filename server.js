@@ -35,26 +35,21 @@ app.get('/api/quote', async (req, res) => {
     }
 
     try {
-        // 1. Fetch live ETH price from Coinbase (Configured with custom User-Agent to bypass Render datacenter block)
-        let ethPriceUsd = 3002; // Stepped to 3002 to verify your new deployment went through instantly!
+        // 1. Fetch live ETH price from CryptoCompare Min-API (100% open to datacenter server pulls)
+        let ethPriceUsd = 3003; // Stepped to 3003 to visually verify the update went through!
         try {
-            const priceResponse = await axios.get('https://coinbase.com', {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'application/json'
-                }
-            });
-            if (priceResponse.data && priceResponse.data.data && priceResponse.data.data.amount) {
-                ethPriceUsd = parseFloat(priceResponse.data.data.amount);
-                console.log(`[Price Engine]: Live ETH Price synchronized via Coinbase at $${ethPriceUsd} USD`);
+            const priceResponse = await axios.get('https://cryptocompare.com');
+            if (priceResponse.data && priceResponse.data.USD) {
+                ethPriceUsd = parseFloat(priceResponse.data.USD);
+                console.log(`[Price Engine]: Live ETH Price synchronized via CryptoCompare at $${ethPriceUsd} USD`);
             }
         } catch (priceError) {
-            console.log('[Price Engine Warning]: Live ticker fetch failed, utilizing fallback rate (\$3002)');
+            console.log('[Price Engine Warning]: Live ticker fetch failed, utilizing fallback rate (\$3003)');
         }
 
         // 2. Fetch swap metrics from Across Protocol Public Suggested Fees API
         const targetEthWei = ethers.parseEther(targetEthAmount).toString();
-        const acrossUrl = 'https://across.to';
+        const acrossUrl = 'https://app.across.to/api/suggested-fees';
         
         let bridgeFeeEth = 0;
         try {
@@ -65,9 +60,6 @@ app.get('/api/quote', async (req, res) => {
                     originChainId: originChainId,
                     destinationChainId: 1, // Target Mainnet
                     amount: targetEthWei
-                },
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 }
             });
             
