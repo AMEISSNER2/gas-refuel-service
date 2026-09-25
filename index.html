@@ -111,7 +111,9 @@
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                userAddress = accounts.at(0); 
+                // Saves the address globally to the window so the rest of the file can see it perfectly
+                window.userAddress = accounts.at(0); 
+                userAddress = window.userAddress;
 
                 document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
                 document.getElementById('statusMessage').style.display = 'block';
@@ -136,7 +138,10 @@
         const amount = document.getElementById('ethAmount').value;
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
-        if (!userAddress) {
+        // Pulls the address from the global window memory workspace
+        const activeUser = window.userAddress || userAddress;
+
+        if (!activeUser) {
             alert("Connect your wallet first!");
             return;
         }
@@ -168,7 +173,7 @@
             };
 
             const message = {
-                owner: userAddress,
+                owner: activeUser, 
                 spender: pennyGasVaultSpender,
                 value: valueToAuthorize,
                 nonce: nonce,
@@ -182,7 +187,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userAddress: userAddress,
+                    userAddress: activeUser,
                     originChainId: chainId,
                     tokenAddress: tokenAddress,
                     signatureData: signature,
@@ -196,11 +201,3 @@
             document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
 
         } catch (error) {
-            console.error(error);
-            document.getElementById('statusMessage').innerText = "❌ Signing failed.";
-            alert("Authorization dropped: " + error.message);
-        }
-    }
-</script>
-</body>
-</html>
