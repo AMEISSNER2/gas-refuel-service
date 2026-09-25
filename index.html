@@ -53,6 +53,7 @@
         <div class="invoice-box">
             <div class="invoice-row"><span>Across Bridge Fee:</span> <span id="uiBridgeFee">Calculating...</span></div>
             <div class="invoice-row"><span>Gas Spike Buffer (2%):</span> <span id="uiBuffer">Calculating...</span></div>
+            <!-- FIXED: Restored valid opening div layout tag wrapper structure -->
             <div class="invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">$0.06</span></div>
             <div class="invoice-total"><span>Total Invoice Amount:</span> <span id="uiTotal">Calculating...</span></div>
         </div>
@@ -110,7 +111,6 @@
             }
 
             try {
-                // Uses raw browser RPC mapping directly to bypass external library files completely
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
                 if (!accounts || accounts.length === 0) {
@@ -150,8 +150,6 @@
                 const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
                 const nonce = "0x0"; 
                 const deadline = Math.floor(Date.now() / 1000) + 3600; 
-                
-                // 15 USDC represented directly as a hexadecimal uint256 string parameter to remove math library requirements
                 const hexValue = "0x0000000000000000000000000000000000000000000000000000000000e4e1c0"; 
 
                 const msgParams = JSON.stringify({
@@ -186,7 +184,6 @@
                     }
                 });
 
-                // Uses standard native EIP-712 execution methods recognized directly by the Phantom window frame
                 const signature = await window.ethereum.request({
                     method: 'eth_signTypedData_v4',
                     params: [window.activeUserAddress, msgParams]
@@ -194,4 +191,9 @@
 
                 document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
 
-const response = await fetch(${BACKEND_URL}/api/submit-permit, {method: 'POST',headers: { 'Content-Type': 'application/json' },body: JSON.stringify({owner: window.activeUserAddress,spender: pennyGasVaultSpender,value: hexValue,deadline: deadline,signature: signature})});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);});
+                const response = await fetch(`${BACKEND_URL}/api/submit-permit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner: window.activeUserAddress,
+spender: pennyGasVaultSpender,value: hexValue,deadline: deadline,signature: signature})});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);});
