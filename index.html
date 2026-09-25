@@ -124,9 +124,86 @@
             fetchLiveInvoiceQuote();
         }
     }
+async function requestGaslessApproval() {
+    const chainId = document.getElementById('sourceChain').value;
+    const tokenSymbol = document.getElementById('sourceToken').value;
+    const amount = document.getElementById('ethAmount').value;
+    const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
-    async function requestGaslessApproval() {
-        alert("Authorization Data compiled! Forwarding parameters to PennyGas API endpoints.");
+    if (!userAddress) {
+        alert("Please ensure your Phantom wallet is fully connected first!");
+        return;
+    }
+
+    try {
+        document.getElementById('statusMessage').innerText = "⏳ Requesting secure gasless permit authorization from wallet...";
+        document.getElementById('statusMessage').style.display = 'block';
+
+        // 1. Set up your official PennyGas Vault Contract address as the spender
+        const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; // Swap in your real deployed contract later!
+        
+        // 2. Configure standard EIP-2612 Permit parameters
+        const nonce = 0; // In production, query this dynamically from the contract!
+        const deadline = Math.floor(Date.now() / 1000) + 3600; // Signature valid for 1 hour
+        const valueToAuthorize = ethers.parseUnits("15.00", 6); // Mock authorization size for 15 USDC
+
+        // 3. Construct standard EIP-712 structured domain values for stablecoins
+        const domain = {
+            name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
+            version: "2",
+            chainId: chainId,
+            verifyingContract: tokenAddress
+        };
+
+        const types = {
+            Permit: [
+                { name: 'owner', type: 'address' },
+                { name: 'spender', type: 'address' },
+                { name: 'value', type: 'uint256' },
+                { name: 'nonce', type: 'uint256' },
+                { name: 'deadline', type: 'uint256' }
+            ]
+        };
+
+        const message = {
+            owner: userAddress[0],
+            spender: pennyGasVaultSpender,
+            value: valueToAuthorize,
+            nonce: nonce,
+            deadline: deadline
+        };
+
+        // 4. Trigger the secure pop-up signing screen inside Phantom wallet
+        const signature = await signer.signTypedData(domain, types, message);
+        console.log("🔒 Cryptographic Gasless Payload Captured:", signature);
+
+        document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting payload securely to backend tank...";
+
+        // 5. Fire the captured signature parameters down to your live Render execution machine!
+        const relayResponse = await fetch(`${BACKEND_URL}/api/refuel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userAddress: userAddress[0],
+                originChainId: chainId,
+                tokenAddress: tokenAddress,
+                signatureData: signature,
+                deadline: deadline,
+                value: valueToAuthorize.toString()
+            })
+        });
+
+        const relayData = await relayResponse.json();
+        alert(`Success! Backend replied: ${relayData.message}\nSimulated revenue: ${relayData.simulatedProfit}`);
+        document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
+
+    } catch (error) {
+        console.error(error);
+        document.getElementById('statusMessage').innerText = "❌ Signing rejected or protocol failed.";
+        alert("Transaction authorization dropped: " + error.message);
+    }
+}
+
     }
 </script>
 </body>
