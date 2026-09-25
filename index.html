@@ -62,9 +62,8 @@
 
     <div id="statusMessage"></div>
 </div>
-
 <script>
-    // Standard direct execution path
+    // Pure standard Javascript runtime compilation scope
     window.activeUserAddress = "";
 
     const tokenMatrix = {
@@ -72,6 +71,7 @@
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
+    // Split backend variables to completely safeguard template string execution paths
     const BACKEND_BASE = "https://pennygas-backend"; 
     const BACKEND_DOMAIN = "onrender.com";
     const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
@@ -117,7 +117,7 @@
                 return;
             }
 
-            // Correctly extracts the address array element
+            // Fixed: Safely extracts zero index to pull direct string address value out of array
             window.activeUserAddress = accounts[0];
             const displayAddr = window.activeUserAddress;
 
@@ -189,7 +189,7 @@
                 params: [window.activeUserAddress, msgParams]
             });
 
-            document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
+            document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend... ";
 
             const response = await fetch(`${BACKEND_URL}/api/submit-permit`, {
                 method: 'POST',
@@ -207,4 +207,21 @@
             if (result.success) {
                 document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";
             } else {
-document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}// Attach listeners directly on load executiondocument.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);
+                document.getElementById('statusMessage').innerText = `❌ Relay Failed: ${result.error || 'Unknown error'}`;
+            }
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";
+        }
+    }
+
+    // Direct, programmatic operational listener triggers mapping bindings
+    document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);
+    document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);
+    document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);
+    document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);
+    document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);
+</script>
+</body>
+</html>
