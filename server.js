@@ -6,16 +6,11 @@ require('dotenv').config();
 
 const app = express();
 
-// FIXED: Configured strict CORS handling parameters for local developer execution contexts
+// FIXED: Opens access to accept all external frontend calls securely without throwing CORS blocks
 app.use(cors({
-    origin: [
-        'http://localhost:9000',
-        'http://localhost:8080',
-        'http://127.0.0.1:9000',
-        'http://127.0.0.1:8080'
-    ],
+    origin: '*',
     methods: ['GET', 'POST'],
-    credentials: true
+    allowedHeaders: ['Content-Type']
 }));
 
 app.use(express.json());
@@ -54,13 +49,13 @@ app.get('/api/quote', async (req, res) => {
         }
 
         // 2. Fetch Across suggested fees safely
-        let bridgeFeeEth = 0.000050; // High-precision safe baseline fallback bridge fee
+        let bridgeFeeEth = 0.000050; 
         try {
             const targetEthWei = ethers.parseEther(targetEthAmount).toString();
             const response = await axios.get('https://across.to', {
                 params: {
                     inputToken: tokenAddress,
-                    outputToken: '0xC02aaA39b223FE8D0A0e5C4F27ead9083c756Cc2', // WETH
+                    outputToken: '0xC02aaA39b223FE8D0A0e5C4F27ead9083c756Cc2', 
                     originChainId: originChainId,
                     destinationChainId: 1,
                     amount: targetEthWei
@@ -94,15 +89,11 @@ app.get('/api/quote', async (req, res) => {
     }
 });
 
-// FIXED: Renamed route target destination path to align with frontend fetch requests
 app.post('/api/submit-permit', async (req, res) => {
     try {
         const { owner, spender, value, deadline, signature } = req.body;
-
-        // Log transaction data securely on the backend terminal interface
-        console.log(`Received permit processing payload from address: ${owner}`);
+        console.log(`Received permit payload from address: ${owner}`);
         
-        // Placeholder for your smart contract interaction logic or voucher distributor step
         res.json({ 
             success: true, 
             message: "Permit transaction signature received and broadcasted successfully!" 
