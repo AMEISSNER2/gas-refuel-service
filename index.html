@@ -65,7 +65,7 @@
 </div>
 
 <script>
-    // Global variable tracking
+    // Simplified Global State Management
     window.activeUserAddress = "";
     window.ethersProvider = null;
     window.ethersSigner = null;
@@ -105,7 +105,7 @@
 
     async function connectPhantomEVM() {
         if (typeof window.ethereum === 'undefined') {
-            console.log("Phantom missing. Falling back to development panel display mode.");
+            console.log("Phantom extension missing fallback mechanism.");
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             fetchLiveInvoiceQuote();
@@ -117,11 +117,10 @@
             window.ethersSigner = await window.ethersProvider.getSigner();
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
-            // Unalterable assignment block
-            const accountString = accounts + "";
-            window.activeUserAddress = accountString.split(",")[0];
-
+            // Fixed: Standard bracket notation to isolate the string address directly
+            window.activeUserAddress = accounts[0];
             const displayAddr = window.activeUserAddress;
+
             document.getElementById('statusMessage').innerText = `🔗 Connected: ${displayAddr.substring(0,6)}...${displayAddr.substring(displayAddr.length - 4)}`;
             document.getElementById('statusMessage').style.display = 'block';
             document.getElementById('connectBtn').style.display = 'none';
@@ -201,3 +200,6 @@
         } catch (error) {
             console.error(error);
             document.getElementById('statusMessage').innerText = "❌ Signing failed.";
+            alert("Authorization dropped: " + error.message);
+        }
+    }
