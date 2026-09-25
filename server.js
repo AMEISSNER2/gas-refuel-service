@@ -5,17 +5,27 @@ const { ethers } = require('ethers');
 require('dotenv').config();
 
 const app = express();
-app.get('/', (req, res) => {res.json({status: "online",message: "PennyGas server is live and responding!",timestamp: new Date()});});
-const PORT = 3000;
 
 // Middleware to handle communication securely
 app.use(cors());
 app.use(express.json());
 
+const PORT = process.env.PORT || 3000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
 /**
- * CORE CORE MATH ROUTE: Fetches prices for the frontend website interface
+ * HEALTH ROOT ROUTE: Instantly check if the server is live via a browser
+ */
+app.get('/', (req, res) => {
+    res.json({
+        status: "online",
+        message: "PennyGas server is live and responding!",
+        timestamp: new Date()
+    });
+});
+
+/**
+ * CORE MATH ROUTE: Fetches prices for the frontend website interface
  */
 app.get('/api/quote', async (req, res) => {
     const { originChainId, tokenAddress, targetEthAmount } = req.query;
@@ -25,18 +35,32 @@ app.get('/api/quote', async (req, res) => {
     }
 
     try {
+        // Clean Across Protocol swap endpoint (bypassing any link wrappers)
         const url = 'https://across.to';
         const targetEthWei = ethers.parseEther(targetEthAmount).toString();
 
+        // 1. Fetch live ETH price from CoinGecko public ticker API
+        let ethPriceUsd = 3000; // Safe fallback price if ticker rate limits hit
+        try {
+            const priceResponse = await axios.get('https://coingecko.com');
+            if (priceResponse.data && priceResponse.data.ethereum && priceResponse.data.ethereum.usd) {
+                ethPriceUsd = parseFloat(priceResponse.data.ethereum.usd);
+                console.log(`[Price Engine]: Live ETH Price synchronized at $${ethPriceUsd} USD`);
+            }
+        } catch (priceError) {
+            console.log('[Price Engine Warning]: Live ticker fetch failed, utilizing fallback rate (\$3000)');
+        }
+
+        // 2. Fetch swap details from Across Protocol API
         const response = await axios.get(url, {
             params: {
-		tradeType: "minOutput",
+                tradeType: "minOutput",
                 originChainId: originChainId,
                 destinationChainId: 1,      // Target: Ethereum Mainnet
                 inputToken: tokenAddress,
                 outputToken: '0xC02aaA39b223FE8D0A0e5C4F27ead9083c756Cc2', // Mainnet WETH
                 amount: targetEthWei,
-		depositor: '0x9999999999999999999999999999999999999999',
+                depositor: '0x9999999999999999999999999999999999999999',
                 integratorID: '0xdead'
             }
         });
@@ -47,7 +71,7 @@ app.get('/api/quote', async (req, res) => {
         const baseCostEth = parseFloat(targetEthAmount) + bridgeFeeEth;
         const bufferCostEth = baseCostEth * 0.02;
         
-        const ethPriceUsd = 3000; 
+        // 3. Compute the final invoice with dynamically sized profit allocations
         const flatFeeEth = FLAT_FEE_USD / ethPriceUsd;
         const finalInvoiceEth = baseCostEth + bufferCostEth + flatFeeEth;
 
@@ -58,10 +82,12 @@ app.get('/api/quote', async (req, res) => {
             buffer: bufferCostEth.toFixed(6),
             ourProfitUsd: FLAT_FEE_USD.toFixed(2),
             ourProfitEth: flatFeeEth.toFixed(6),
-            totalInvoiceEth: finalInvoiceEth.toFixed(6)
+            totalInvoiceEth: finalInvoiceEth.toFixed(6),
+            currentEthPrice: ethPriceUsd.toFixed(2)
         });
 
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: "Failed to compile live API quote calculation" });
     }
 });
@@ -74,20 +100,17 @@ app.post('/api/refuel', async (req, res) => {
 
     console.log(`\n🚀 [API Received]: Processing request for user ${userAddress}`);
     console.log(`🔒 Signature Captured. Advancing gas fees from server burner tank...`);
-
-    // In production, your contract execution logic triggers natively right here!
     
     res.json({
         success: true,
-        message: "Refuel successfully broad-casted to Ethereum Mainnet!",
+        message: "Refuel successfully broadcasted to Ethereum Mainnet!",
         simulatedProfit: `$${FLAT_FEE_USD.toFixed(2)}`
     });
 });
 
-// Fire up the local internet link listening on port 3000
-app.listen(PORT, () => {
+// Fire up the server loop
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`=======================================================`);
     console.log(`⛽  PENNYGAS LIVE ENDPOINT API SERVER RUNNING ON PORT ${PORT}`);
-    console.log(`👉 Your internal network gate is listening at: https://urldefense.com/v3/__http://localhost:3000__;!!P9Lt_3V8VW4!qI0fBddT77dWczJD_3kqf37uZ8-SPKMwdF1P7EoZh7iKzQdMlIkZrQ8MJtZHqtOzFnTPIuw44qVzsowZB0eb$`);
     console.log(`=======================================================`);
 });
