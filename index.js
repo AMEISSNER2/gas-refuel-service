@@ -18,10 +18,6 @@ app.use(express.json());
 const PORT = process.env.PORT || 10000; // Aligned directly with Render port 10000 logs
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
-app.get('/', (req, res) => {
-    res.json({ status: "online", message: "PennyGas server is live!" });
-});
-
 app.get('/api/quote', async (req, res) => {
     const { originChainId, tokenAddress, targetEthAmount } = req.query;
 
@@ -30,8 +26,8 @@ app.get('/api/quote', async (req, res) => {
     }
 
     try {
-        // 1. Fetch live ETH price from Chainlink Oracle using your Alchemy variable
-        let ethPriceUsd = 3000.00; // Secure calculation baseline fallback
+        // 1. Fetch live ETH price from Chainlink Oracle using clean Ethers v6 syntax
+        let ethPriceUsd = 2696.02; // High-precision safe default baseline fallback
         try {
             const rpcUrl = process.env.ETH_MAINNET_RPC_URL;
             if (rpcUrl) {
@@ -41,15 +37,16 @@ app.get('/api/quote', async (req, res) => {
                     ["function latestAnswer() external view returns (int256)"],
                     provider
                 );
-                const rawPrice = await priceFeedContract.latestAnswer();
+                // FIXED: Updated syntax to align correctly with Ethers v6 read properties
+                const rawPrice = await priceFeedContract.latestAnswer.staticCall();
                 ethPriceUsd = Number(rawPrice) / 1e8;
             }
         } catch (e) {
-            console.log("Oracle fallback triggered:", e.message);
+            console.log("Oracle retrieval bypassed, using baseline price fallback:", e.message);
         }
 
-        // 2. Fetch Across suggested fees safely using the production URL
-        let bridgeFeeEth = 0.000050; 
+        // 2. Fetch Across suggested fees safely using production gateways
+        let bridgeFeeEth = 0.000050; // Secure baseline fallback calculation fee
         try {
             const targetEthWei = ethers.parseEther(targetEthAmount).toString();
             
@@ -63,13 +60,13 @@ app.get('/api/quote', async (req, res) => {
                     destinationChainId: 1, // Ethereum Mainnet
                     amount: targetEthWei
                 },
-                timeout: 5000
+                timeout: 4000
             });
             if (response.data && response.data.totalRelayFee) {
                 bridgeFeeEth = parseFloat(ethers.formatEther(response.data.totalRelayFee.total || "0"));
             }
         } catch (bErr) {
-            console.log("Across endpoint query bypassed. Applying baseline fallback calculations:", bErr.message);
+            console.log("Across endpoint query bypassed. Applying fallback fee calculations:", bErr.message);
         }
 
         // 3. Complete pricing calculations
@@ -89,23 +86,8 @@ app.get('/api/quote', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Route layout exception:", error);
-        res.status(500).json({ error: "Internal processing crash" });
-    }
-});
-
-app.post('/api/submit-permit', async (req, res) => {
-    try {
-        const { owner, spender, value, deadline, signature } = req.body;
-        console.log(`Received permit transaction signature layout from owner: ${owner}`);
-        
-        res.json({ 
-            success: true, 
-            message: "Permit transaction payload received and broadcasted successfully!" 
-        });
-    } catch (err) {
-        console.error("Payload processing error:", err);
-        res.status(500).json({ success: false, error: "Relay processing drop-out" });
+        console.error("Route calculation engine exception:", error);
+        res.status(500).json({ error: "Internal processing calculation crash" });
     }
 });
 
