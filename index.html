@@ -6,96 +6,18 @@
     <title>PennyGas - Ultra Cheap Refuel</title>
     <script src="https://cloudflare.com"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0b0e14;
-            color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: #151a26;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            width: 380px;
-        }
-        h1 { color: #00ffa3; font-size: 26px; margin-bottom: 5px; }
-        p { color: #8a9fc2; font-size: 14px; margin-top: 0; margin-bottom: 25px; }
-        .form-group {
-            text-align: left;
-            margin-bottom: 15px;
-        }
-        label {
-            font-size: 12px;
-            color: #8a9fc2;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: block;
-            margin-bottom: 5px;
-        }
-        select, input {
-            width: 100%;
-            padding: 10px;
-            background-color: #0b0e14;
-            border: 1px solid #2b313e;
-            border-radius: 6px;
-            color: white;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        .btn {
-            background-color: #4e44ce;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-            transition: background 0.2s;
-        }
-        .btn:hover { background-color: #6358e1; }
-        .invoice-box {
-            background-color: #0b0e14;
-            border: 1px dashed #2b313e;
-            border-radius: 6px;
-            padding: 12px;
-            margin-top: 15px;
-            text-align: left;
-            font-size: 13px;
-        }
-        .invoice-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 6px;
-            color: #8a9fc2;
-        }
-        .invoice-total {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #2b313e;
-            font-weight: bold;
-            color: #00ffa3;
-        }
-        #statusMessage {
-            margin-top: 15px;
-            font-family: monospace;
-            color: #00ffa3;
-            font-size: 13px;
-            background: #0b0e14;
-            padding: 10px;
-            border-radius: 4px;
-            display: none;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; width: 380px; }
+        h1 { color: #00ffa3; font-size: 26px; }
+        p { color: #8a9fc2; font-size: 14px; }
+        .form-group { text-align: left; margin-bottom: 15px; }
+        label { font-size: 12px; color: #8a9fc2; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        select, input { width: 100%; padding: 10px; background-color: #0b0e14; border: 1px solid #2b313e; border-radius: 6px; color: white; box-sizing: border-box; }
+        .btn { background-color: #4e44ce; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .invoice-box { background-color: #0b0e14; border: 1px dashed #2b313e; border-radius: 6px; padding: 12px; margin-top: 15px; text-align: left; font-size: 13px; }
+        .invoice-row { display: flex; justify-content: space-between; margin-bottom: 6px; color: #8a9fc2; }
+        .invoice-total { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2b313e; font-weight: bold; color: #00ffa3; }
+        #statusMessage { margin-top: 15px; font-family: monospace; color: #00ffa3; background: #0b0e14; padding: 10px; border-radius: 4px; display: none; }
     </style>
 </head>
 <body>
@@ -108,7 +30,7 @@
 
     <div id="dashboard" style="display: none; margin-top: 20px;">
         <div class="form-group">
-            <label>You Pay From Chain (You need gas for)</label>
+            <label>You Pay From Chain</label>
             <select id="sourceChain" onchange="fetchLiveInvoiceQuote()">
                 <option value="1">Ethereum Mainnet</option>
                 <option value="42161" selected>Arbitrum One</option>
@@ -128,7 +50,6 @@
             <input type="number" id="ethAmount" value="0.01" step="0.005" min="0.001" oninput="fetchLiveInvoiceQuote()">
         </div>
 
-        <!-- Dynamic Invoice Box connected straight to your API Server -->
         <div class="invoice-box">
             <div class="invoice-row"><span>Across Bridge Fee:</span> <span id="uiBridgeFee">Calculating...</span></div>
             <div class="invoice-row"><span>Gas Spike Buffer (2%):</span> <span id="uiBuffer">Calculating...</span></div>
@@ -136,7 +57,7 @@
             <div class="invoice-total"><span>Total Invoice Amount:</span> <span id="uiTotal">Calculating...</span></div>
         </div>
 
-        <button id="requestBtn" class="btn" onclick="requestGaslessApproval()">Authorize Gasless Refuel</button>
+        <button id="requestBtn" class="btn" style="background-color: #22c55e;" onclick="requestGaslessApproval()">Authorize Gasless Refuel</button>
     </div>
 
     <div id="statusMessage"></div>
@@ -146,28 +67,17 @@
     let provider, signer, userAddress;
 
     const tokenMatrix = {
-        "1": {
-            "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
-        },
-        "42161": {
-            "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-            "USDT": "0xFd086b97270535728a370aa7c969c19027158356"
-        }
+        "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
+        "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
     const BACKEND_URL = "https://onrender.com";
 
-    /**
-     * CONNECTS INTERFACE TO YOUR RUNNING API SERVER
-     */
     async function fetchLiveInvoiceQuote() {
         const chainId = document.getElementById('sourceChain').value;
         const tokenSymbol = document.getElementById('sourceToken').value;
         const amount = document.getElementById('ethAmount').value;
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
-
-        // Logic check: determine token text display based on dropdown network choice
         const currentGasLabel = (chainId === "42161") ? "ARB" : "ETH";
 
         if (!amount || amount <= 0) return;
@@ -181,7 +91,6 @@
                return;
             }
 
-            // Text items now apply dynamic currency tickers based on your choice
             document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ${currentGasLabel}`;
             document.getElementById('uiBuffer').innerText = `${data.buffer} ${currentGasLabel}`;
             document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ${currentGasLabel}`;
@@ -197,7 +106,7 @@
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                // Fixed: Extract the first account string from the array so string methods do not crash
+                // Fixed: Explicitly targets string elements inside the accounts array
                 userAddress = accounts[0]; 
 
                 document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
@@ -210,7 +119,6 @@
                 alert("Connection refused.");
             }
         } else {
-            console.log("Phantom wallet hook missing. Bypassing screen element for mock window testing.");
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             fetchLiveInvoiceQuote();
