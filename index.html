@@ -64,7 +64,6 @@
     <div id="statusMessage"></div>
 </div>
 <script>
-    // Global variable tracking slots
     window.activeUserAddress = "";
 
     const tokenMatrix = {
@@ -72,7 +71,6 @@
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
-    // Split backend variables configuration layout
     const BACKEND_BASE = "https://pennygas-backend"; 
     const BACKEND_DOMAIN = "onrender.com";
     const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
@@ -101,13 +99,13 @@
             document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ${currentGasLabel}`;
         } catch (error) {
             console.error("Quote layout breakdown:", error);
-            document.getElementById('uiTotal').innerText = "Server link offline";
+            document.getElementById('uiTotal').innerText = "Server CORS link offline";
         }
     }
 
     async function connectPhantomEVM() {
         if (typeof window.ethereum === 'undefined') {
-            alert("Phantom Wallet extension not found! Please check your browser extension toolbar.");
+            alert("Phantom Wallet extension not found!");
             return;
         }
 
@@ -115,12 +113,11 @@
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
             if (!accounts || accounts.length === 0) {
-                alert("No active crypto accounts found inside extension profile layer.");
+                alert("No crypto accounts found.");
                 return;
             }
 
-            // FIXED PERMANENTLY: Targets item index zero directly to pull string address value cleanly out of array
-            window.activeUserAddress = accounts[0];
+            window.activeUserAddress = accounts;
             const displayAddr = window.activeUserAddress;
 
             document.getElementById('statusMessage').innerText = `🔗 Connected: ${displayAddr.substring(0,6)}...${displayAddr.substring(displayAddr.length - 4)}`;
@@ -130,8 +127,8 @@
             
             fetchLiveInvoiceQuote();
         } catch (error) {
-            console.error("Wallet hook exception payload:", error);
-            alert("Connection refused by extension container window.");
+            console.error(error);
+            alert("Connection refused by wallet.");
         }
     }
 
@@ -146,6 +143,21 @@
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
         try {
+            // AUTOMATED SWITCH ENFORCER: Forces the wallet UI container to switch over to Arbitrum before prompting for permission
+            const targetHexChain = "0x" + parseInt(chainId).toString(16);
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: targetHexChain }],
+                });
+            } catch (switchError) {
+                // Thrown if the target chain isn't registered on the user's extension settings layout profile yet
+                if (switchError.code === 4902) {
+                    alert("Please add the Arbitrum One network directly inside your extension configurations profile rows.");
+                }
+                throw switchError;
+            }
+
             document.getElementById('statusMessage').innerText = "⏳ Requesting gasless permit...";
             document.getElementById('statusMessage').style.display = 'block';
 
@@ -186,7 +198,6 @@
                 }
             });
 
-            // Executes signature generation natively via Phantom extension container
             const signature = await window.ethereum.request({
                 method: 'eth_signTypedData_v4',
                 params: [window.activeUserAddress, msgParams]
@@ -215,11 +226,10 @@
 
         } catch (error) {
             console.error("Signature process breakdown runtime error:", error);
-            document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";
+            document.getElementById('statusMessage').innerText = "❌ Signature rejected or chain misaligned.";
         }
     }
 
-    // Direct event listener mappings
     document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);
     document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);
     document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);
