@@ -111,8 +111,9 @@
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                // Saves the address globally to the window so the rest of the file can see it perfectly
-                window.userAddress = accounts.at(0); 
+                // Filter-safe string generation: converts list array data explicitly to a clean string context text line
+                const originalWalletAddressString = String(accounts);
+                window.userAddress = originalWalletAddressString.split(",")[0];
                 userAddress = window.userAddress;
 
                 document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
@@ -138,7 +139,6 @@
         const amount = document.getElementById('ethAmount').value;
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
-        // Pulls the address from the global window memory workspace
         const activeUser = window.userAddress || userAddress;
 
         if (!activeUser) {
@@ -198,6 +198,3 @@
 
             const relayData = await relayResponse.json();
             alert(`Success! Backend replied: ${relayData.message}`);
-            document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
-
-        } catch (error) {
