@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
     res.json({ status: "online", message: "PennyGas server is live!" });
 });
 
-app.get('/api/quote', async (req, res) => {
+app.get('/quote', async (req, res) => {
     const { originChainId, tokenAddress, targetEthAmount } = req.query;
 
     if (!originChainId || !tokenAddress || !targetEthAmount) {
