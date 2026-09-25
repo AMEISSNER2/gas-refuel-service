@@ -36,7 +36,7 @@ app.get('/api/quote', async (req, res) => {
 
     try {
         // 1. Fetch live ETH price from Coinbase (100% open, unblocked on Render cloud hosts)
-        let ethPriceUsd = 3000; 
+        let ethPriceUsd = 3001; // Hardcoded to 3001 so you can see your update instantly!
         try {
             const priceResponse = await axios.get('https://coinbase.com');
             if (priceResponse.data && priceResponse.data.data && priceResponse.data.data.amount) {
@@ -44,7 +44,7 @@ app.get('/api/quote', async (req, res) => {
                 console.log(`[Price Engine]: Live ETH Price synchronized via Coinbase at $${ethPriceUsd} USD`);
             }
         } catch (priceError) {
-            console.log('[Price Engine Warning]: Live ticker fetch failed, utilizing fallback rate (\$3000)');
+            console.log('[Price Engine Warning]: Live ticker fetch failed, utilizing fallback rate (\$3001)');
         }
 
         // 2. Fetch swap metrics from Across Protocol Public Suggested Fees API
