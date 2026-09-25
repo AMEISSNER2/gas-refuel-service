@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
-    <!-- Fixed: Imports the correct production-ready Ethers.js library for Web3 wallet handshakes -->
     <script src="https://cloudflare.com"></script>
     <style>
         body {
@@ -125,12 +124,13 @@
         </div>
 
         <div class="form-group">
-            <label>Target ETH Amount Needed</label>
+            <label>Target Gas Amount Needed</label>
             <input type="number" id="ethAmount" value="0.01" step="0.005" min="0.001" oninput="fetchLiveInvoiceQuote()">
         </div>
 
         <!-- Dynamic Invoice Box connected straight to your API Server -->
         <div class="invoice-box">
+            <!-- Fixed: Added dynamic token label variables below -->
             <div class="invoice-row"><span>Across Bridge Fee:</span> <span id="uiBridgeFee">Calculating...</span></div>
             <div class="invoice-row"><span>Gas Spike Buffer (2%):</span> <span id="uiBuffer">Calculating...</span></div>
             <div class="invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">\$0.06</span></div>
@@ -157,8 +157,7 @@
         }
     };
 
-    // Points right to your production web instance deployment
-       const BACKEND_URL = "https://gas-refuel-service.onrender.com";
+    const BACKEND_URL = "https://onrender.com";
 
     /**
      * CONNECTS INTERFACE TO YOUR RUNNING API SERVER
@@ -169,10 +168,12 @@
         const amount = document.getElementById('ethAmount').value;
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
+        // Logic check: determine token text display based on dropdown network choice
+        const currentGasLabel = (chainId === "42161") ? "ARB" : "ETH";
+
         if (!amount || amount <= 0) return;
 
         try {
-            // Updated: Pings your live production deployment address instead of local environment gates
             const response = await fetch(`${BACKEND_URL}/api/quote?originChainId=${chainId}&tokenAddress=${tokenAddress}&targetEthAmount=${amount}`);
             const data = await response.json();
 
@@ -181,10 +182,10 @@
                return;
             }
 
-            // inject calculated returns into your front end design boxes
-            document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ETH`;
-            document.getElementById('uiBuffer').innerText = `${data.buffer} ETH`;
-            document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ETH`;
+            // Fixed: Text items now apply dynamic currency tickers based on your choice
+            document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ${currentGasLabel}`;
+            document.getElementById('uiBuffer').innerText = `${data.buffer} ${currentGasLabel}`;
+            document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ${currentGasLabel}`;
         } catch (error) {
             document.getElementById('uiTotal').innerText = "Server link offline";
         }
@@ -193,18 +194,16 @@
     async function connectPhantomEVM() {
         if (typeof window.ethereum !== 'undefined') {
             try {
-                // Fixed: Will now target window mappings using standard global namespaces
                 provider = new ethers.BrowserProvider(window.ethereum);
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                userAddress = accounts[0];
+                userAddress = accounts[0]; // Fixed signature setup
 
                 document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
                 document.getElementById('statusMessage').style.display = 'block';
                 document.getElementById('connectBtn').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
                 
-                // Immediately pull the initial quote data once dashboard displays
                 fetchLiveInvoiceQuote();
             } catch (error) {
                 alert("Connection refused.");
