@@ -104,7 +104,9 @@ app.post('/api/submit-permit', async (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+// FIXED BINDING: Completely clear the strict IP string parameter row
+app.listen(PORT, () => {
     console.log(`Server online on port ${PORT}`);
 });
+
 // deployment-sync-v2
