@@ -8,12 +8,13 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; width: 380px; }
-        h1 { color: #00ffa3; font-size: 26px; }
-        p { color: #8a9fc2; font-size: 14px; }
+        h1 { color: #00ffa3; font-size: 26px; margin-bottom: 5px; }
+        p { color: #8a9fc2; font-size: 14px; margin-top: 0; margin-bottom: 25px; }
         .form-group { text-align: left; margin-bottom: 15px; }
         label { font-size: 12px; color: #8a9fc2; text-transform: uppercase; display: block; margin-bottom: 5px; }
         select, input { width: 100%; padding: 10px; background-color: #0b0e14; border: 1px solid #2b313e; border-radius: 6px; color: white; box-sizing: border-box; }
-        .btn { background-color: #4e44ce; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn { background-color: #4e44ce; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; transition: background 0.2s; }
+        .btn:hover { background-color: #6358e1; }
         .invoice-box { background-color: #0b0e14; border: 1px dashed #2b313e; border-radius: 6px; padding: 12px; margin-top: 15px; text-align: left; font-size: 13px; }
         .invoice-row { display: flex; justify-content: space-between; margin-bottom: 6px; color: #8a9fc2; }
         .invoice-total { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2b313e; font-weight: bold; color: #00ffa3; }
@@ -71,7 +72,7 @@
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
-    const BACKEND_URL = "https://gas-refuel-service.onrender.com";
+    const BACKEND_URL = "https://gas-refuel-service.onrender.com/";
 
     async function fetchLiveInvoiceQuote() {
         const chainId = document.getElementById('sourceChain').value;
@@ -106,7 +107,7 @@
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                // Fixed: Explicitly targets string elements inside the accounts array
+                // Fixed: Explicitly targets the first string string text block item inside the accounts index
                 userAddress = accounts[0]; 
 
                 document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
@@ -119,92 +120,77 @@
                 alert("Connection refused.");
             }
         } else {
+            console.log("Phantom wallet hook missing. Bypassing extension check boundaries for mock window testing.");
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             fetchLiveInvoiceQuote();
         }
     }
-async function requestGaslessApproval() {
-    const chainId = document.getElementById('sourceChain').value;
-    const tokenSymbol = document.getElementById('sourceToken').value;
-    const amount = document.getElementById('ethAmount').value;
-    const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
-    if (!userAddress) {
-        alert("Please ensure your Phantom wallet is fully connected first!");
-        return;
-    }
+    async function requestGaslessApproval() {
+        const chainId = document.getElementById('sourceChain').value;
+        const tokenSymbol = document.getElementById('sourceToken').value;
+        const amount = document.getElementById('ethAmount').value;
+        const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
-    try {
-        document.getElementById('statusMessage').innerText = "⏳ Requesting secure gasless permit authorization from wallet...";
-        document.getElementById('statusMessage').style.display = 'block';
+        if (!userAddress) {
+            alert("Please ensure your Phantom wallet is fully connected first!");
+            return;
+        }
 
-        // 1. Set up your official PennyGas Vault Contract address as the spender
-        const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; // Swap in your real deployed contract later!
-        
-        // 2. Configure standard EIP-2612 Permit parameters
-        const nonce = 0; // In production, query this dynamically from the contract!
-        const deadline = Math.floor(Date.now() / 1000) + 3600; // Signature valid for 1 hour
-        const valueToAuthorize = ethers.parseUnits("15.00", 6); // Mock authorization size for 15 USDC
+        try {
+            document.getElementById('statusMessage').innerText = "⏳ Requesting secure gasless permit authorization from wallet...";
+            document.getElementById('statusMessage').style.display = 'block';
 
-        // 3. Construct standard EIP-712 structured domain values for stablecoins
-        const domain = {
-            name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
-            version: "2",
-            chainId: chainId,
-            verifyingContract: tokenAddress
-        };
+            // Set up your official PennyGas Vault Contract address as the spender
+            const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; // Dummy address for simulation testing
+            const nonce = 0; 
+            const deadline = Math.floor(Date.now() / 1000) + 3600; // Signature valid for 1 hour
+            const valueToAuthorize = ethers.parseUnits("15.00", 6); // Mock approval size limit parameter (15 USDC)
 
-        const types = {
-            Permit: [
-                { name: 'owner', type: 'address' },
-                { name: 'spender', type: 'address' },
-                { name: 'value', type: 'uint256' },
-                { name: 'nonce', type: 'uint256' },
-                { name: 'deadline', type: 'uint256' }
-            ]
-        };
+            // Construct standard EIP-712 structured domain values for stablecoins
+            const domain = {
+                name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
+                version: "2",
+                chainId: chainId,
+                verifyingContract: tokenAddress
+            };
 
-        const message = {
-            owner: userAddress[0],
-            spender: pennyGasVaultSpender,
-            value: valueToAuthorize,
-            nonce: nonce,
-            deadline: deadline
-        };
+            const types = {
+                Permit: [
+                    { name: 'owner', type: 'address' },
+                    { name: 'spender', type: 'address' },
+                    { name: 'value', type: 'uint256' },
+                    { name: 'nonce', type: 'uint256' },
+                    { name: 'deadline', type: 'uint256' }
+                ]
+            };
 
-        // 4. Trigger the secure pop-up signing screen inside Phantom wallet
-        const signature = await signer.signTypedData(domain, types, message);
-        console.log("🔒 Cryptographic Gasless Payload Captured:", signature);
+            const message = {
+                owner: userAddress,
+                spender: pennyGasVaultSpender,
+                value: valueToAuthorize,
+                nonce: nonce,
+                deadline: deadline
+            };
 
-        document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting payload securely to backend tank...";
+            // Trigger the secure pop-up signing screen inside Phantom wallet
+            const signature = await signer.signTypedData(domain, types, message);
+            console.log("🔒 Cryptographic Gasless Payload Captured:", signature);
 
-        // 5. Fire the captured signature parameters down to your live Render execution machine!
-        const relayResponse = await fetch(`${BACKEND_URL}/api/refuel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userAddress: userAddress[0],
-                originChainId: chainId,
-                tokenAddress: tokenAddress,
-                signatureData: signature,
-                deadline: deadline,
-                value: valueToAuthorize.toString()
-            })
-        });
+            document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting payload securely to backend tank...";
 
-        const relayData = await relayResponse.json();
-        alert(`Success! Backend replied: ${relayData.message}\nSimulated revenue: ${relayData.simulatedProfit}`);
-        document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
+            // Fire the signature down to your live Render execution machine
+            const relayResponse = await fetch(`${BACKEND_URL}/api/refuel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userAddress: userAddress,
+                    originChainId: chainId,
+                    tokenAddress: tokenAddress,
+                    signatureData: signature,
+                    deadline: deadline,
+                    value: valueToAuthorize.toString()
+                })
+            });
 
-    } catch (error) {
-        console.error(error);
-        document.getElementById('statusMessage').innerText = "❌ Signing rejected or protocol failed.";
-        alert("Transaction authorization dropped: " + error.message);
-    }
-}
-
-    }
-</script>
-</body>
-</html>
