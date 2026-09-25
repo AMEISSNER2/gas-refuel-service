@@ -25,7 +25,7 @@ app.get('/api/quote', async (req, res) => {
     }
 
     try {
-        const url = 'https://urldefense.com/v3/__https://across.to__;!!P9Lt_3V8VW4!qI0fBddT77dWczJD_3kqf37uZ8-SPKMwdF1P7EoZh7iKzQdMlIkZrQ8MJtZHqtOzFnTPIuw44qVzspEB4Jbk$';
+        const url = 'https://across.to';
         const targetEthWei = ethers.parseEther(targetEthAmount).toString();
 
         const response = await axios.get(url, {
