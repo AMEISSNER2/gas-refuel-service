@@ -35,21 +35,32 @@ app.get('/api/quote', async (req, res) => {
     }
 
     try {
-        // 1. Fetch live ETH price from CryptoCompare Min-API (100% open to datacenter server pulls)
-        let ethPriceUsd = 3003; // Stepped to 3003 to visually verify the update went through!
+        // 1. Fetch live ETH price from Chainlink Oracle on Mainnet via your RPC provider
+        let ethPriceUsd = 3004; // Stepped to 3004 to verify this clean build deployed!
         try {
-            const priceResponse = await axios.get('https://cryptocompare.com');
-            if (priceResponse.data && priceResponse.data.USD) {
-                ethPriceUsd = parseFloat(priceResponse.data.USD);
-                console.log(`[Price Engine]: Live ETH Price synchronized via CryptoCompare at $${ethPriceUsd} USD`);
+            const rpcUrl = process.env.ETH_MAINNET_RPC_URL;
+            if (rpcUrl) {
+                const provider = new ethers.JsonRpcProvider(rpcUrl);
+                // Chainlink ETH/USD Aggregator Contract Address on Mainnet
+                const chainlinkAggregatorAddress = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419";
+                // Minimal ABI snippet to extract latestAnswer metrics
+                const minAbi = ["function latestAnswer() external view returns (int256)"];
+                const priceFeedContract = new ethers.Contract(chainlinkAggregatorAddress, minAbi, provider);
+                
+                const rawPrice = await priceFeedContract.latestAnswer();
+                // Chainlink price variables return with 8 decimals on USD pairs
+                ethPriceUsd = Number(rawPrice) / 1e8;
+                console.log(`[Onchain Price Feed]: Live ETH Price synchronized via Chainlink Oracle at $${ethPriceUsd} USD`);
+            } else {
+                console.log('[Onchain Price Feed Warning]: ETH_MAINNET_RPC_URL variable missing from environment settings.');
             }
-        } catch (priceError) {
-            console.log('[Price Engine Warning]: Live ticker fetch failed, utilizing fallback rate (\$3003)');
+        } catch (oracleError) {
+            console.log('[Onchain Price Feed Warning]: Direct Oracle contract query choked, using fallback rate (\$3004)', oracleError.message);
         }
 
         // 2. Fetch swap metrics from Across Protocol Public Suggested Fees API
         const targetEthWei = ethers.parseEther(targetEthAmount).toString();
-        const acrossUrl = 'https://app.across.to/api/suggested-fees';
+        const acrossUrl = 'https://across.to';
         
         let bridgeFeeEth = 0;
         try {
