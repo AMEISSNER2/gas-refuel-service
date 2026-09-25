@@ -5,6 +5,7 @@ const { ethers } = require('ethers');
 require('dotenv').config();
 
 const app = express();
+app.get('/', (req, res) => {res.json({status: "online",message: "PennyGas server is live and responding!",timestamp: new Date()});});
 const PORT = 3000;
 
 // Middleware to handle communication securely
