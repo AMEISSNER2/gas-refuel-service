@@ -39,12 +39,12 @@ app.get('/api/quote', async (req, res) => {
         const url = 'https://across.to';
         const targetEthWei = ethers.parseEther(targetEthAmount).toString();
 
-        // 1. Fetch live ETH price from CoinGecko public ticker API
-        let ethPriceUsd = 3000; // Safe fallback price if ticker rate limits hit
+        // 1. Fetch live ETH price from CryptoCompare (Open API, completely unblocked on Render)
+        let ethPriceUsd = 3000; // Safe fallback price if network drops
         try {
-            const priceResponse = await axios.get('https://coingecko.com');
-            if (priceResponse.data && priceResponse.data.ethereum && priceResponse.data.ethereum.usd) {
-                ethPriceUsd = parseFloat(priceResponse.data.ethereum.usd);
+            const priceResponse = await axios.get('https://cryptocompare.com');
+            if (priceResponse.data && priceResponse.data.USD) {
+                ethPriceUsd = parseFloat(priceResponse.data.USD);
                 console.log(`[Price Engine]: Live ETH Price synchronized at $${ethPriceUsd} USD`);
             }
         } catch (priceError) {
