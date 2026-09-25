@@ -107,7 +107,7 @@
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                // Fixed: Explicitly targets the first string string text block item inside the accounts index
+                // Fixed: Extract the string safely so string layout operations work properly
                 userAddress = accounts[0]; 
 
                 document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
@@ -120,7 +120,7 @@
                 alert("Connection refused.");
             }
         } else {
-            console.log("Phantom wallet hook missing. Bypassing extension check boundaries for mock window testing.");
+            console.log("Phantom wallet extension not detected. Activating mock dashboard template.");
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             fetchLiveInvoiceQuote();
@@ -142,13 +142,11 @@
             document.getElementById('statusMessage').innerText = "⏳ Requesting secure gasless permit authorization from wallet...";
             document.getElementById('statusMessage').style.display = 'block';
 
-            // Set up your official PennyGas Vault Contract address as the spender
-            const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; // Dummy address for simulation testing
+            const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
             const nonce = 0; 
-            const deadline = Math.floor(Date.now() / 1000) + 3600; // Signature valid for 1 hour
-            const valueToAuthorize = ethers.parseUnits("15.00", 6); // Mock approval size limit parameter (15 USDC)
+            const deadline = Math.floor(Date.now() / 1000) + 3600; 
+            const valueToAuthorize = ethers.parseUnits("15.00", 6); 
 
-            // Construct standard EIP-712 structured domain values for stablecoins
             const domain = {
                 name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
                 version: "2",
@@ -174,13 +172,11 @@
                 deadline: deadline
             };
 
-            // Trigger the secure pop-up signing screen inside Phantom wallet
             const signature = await signer.signTypedData(domain, types, message);
             console.log("🔒 Cryptographic Gasless Payload Captured:", signature);
 
             document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting payload securely to backend tank...";
 
-            // Fire the signature down to your live Render execution machine
             const relayResponse = await fetch(`${BACKEND_URL}/api/refuel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -194,3 +190,10 @@
                 })
             });
 
+            const relayData = await relayResponse.json();
+            alert(`Success! Backend replied: ${relayData.message}\nSimulated revenue: ${relayData.simulatedProfit}`);
+            document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('statusMessage').innerText = "❌ Signing rejected or protocol failed.";
