@@ -130,7 +130,6 @@
 
         <!-- Dynamic Invoice Box connected straight to your API Server -->
         <div class="invoice-box">
-            <!-- Fixed: Added dynamic token label variables below -->
             <div class="invoice-row"><span>Across Bridge Fee:</span> <span id="uiBridgeFee">Calculating...</span></div>
             <div class="invoice-row"><span>Gas Spike Buffer (2%):</span> <span id="uiBuffer">Calculating...</span></div>
             <div class="invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">\$0.06</span></div>
@@ -182,7 +181,7 @@
                return;
             }
 
-            // Fixed: Text items now apply dynamic currency tickers based on your choice
+            // Text items now apply dynamic currency tickers based on your choice
             document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ${currentGasLabel}`;
             document.getElementById('uiBuffer').innerText = `${data.buffer} ${currentGasLabel}`;
             document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ${currentGasLabel}`;
@@ -197,7 +196,9 @@
                 provider = new ethers.BrowserProvider(window.ethereum);
                 signer = await provider.getSigner();
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                userAddress = accounts[0]; // Fixed signature setup
+                
+                // Fixed: Extract the first account string from the array so string methods do not crash
+                userAddress = accounts[0]; 
 
                 document.getElementById('statusMessage').innerText = `🔗 Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
                 document.getElementById('statusMessage').style.display = 'block';
