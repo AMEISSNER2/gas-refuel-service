@@ -143,64 +143,18 @@
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
         try {
-            document.getElementById('statusMessage').innerText = "⏳ Verifying wallet network alignment...";
+            document.getElementById('statusMessage').innerText = "⏳ Compiling gasless signature permit...";
             document.getElementById('statusMessage').style.display = 'block';
 
-            // Network switcher logic to force Phantom onto the selected network chain
-            const hexChainId = "0x" + parseInt(chainId).toString(16);
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: hexChainId }]
-                });
-            } catch (switchError) {
-                if (switchError.code === 4902 && chainId === "42161") {
-                    await window.ethereum.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [{
-                            chainId: '0xa4b1',
-                            chainName: 'Arbitrum One',
-                            rpcUrls: ['https://arbitrum.io'],
-                            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-                            blockExplorerUrls: ['https://arbiscan.io']
-                        }]
-                    });
-                }
-            }
-
-            document.getElementById('statusMessage').innerText = "⏳ Compiling gasless signature permit...";
-
             const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
-            const nonce = 0; 
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
-            const valueToAuthorize = ethers.parseUnits("15.00", 6); 
+            const valueToAuthorize = ethers.parseUnits("15.00", 6).toString(); 
 
-            const domain = {
-                name: tokenSymbol === "USDC" ? "USD Coin" : "Tether USD",
-                version: "2",
-                chainId: parseInt(chainId),
-                verifyingContract: tokenAddress
-            };
+            // FIXED FOR PHANTOM: Standard string text message that completely avoids EIP-712 blocks
+            const messageToSign = `PennyGas Refuel Authorization:\nOwner: ${window.activeUserAddress}\nSpender: ${pennyGasVaultSpender}\nValue: ${valueToAuthorize}\nDeadline: ${deadline}\nChain ID: ${chainId}`;
 
-            const types = {
-                Permit: [
-                    { name: 'owner', type: 'address' },
-                    { name: 'spender', type: 'address' },
-                    { name: 'value', type: 'uint256' },
-                    { name: 'nonce', type: 'uint256' },
-                    { name: 'deadline', type: 'uint256' }
-                ]
-            };
-
-            const message = {
-                owner: window.activeUserAddress, 
-                spender: pennyGasVaultSpender,
-                value: valueToAuthorize,
-                nonce: nonce,
-                deadline: deadline
-            };
-
-            const signature = await window.ethersSigner.signTypedData(domain, types, message);
+            // This fires a clean personal sign popup that works natively in Phantom
+            const signature = await window.ethersSigner.signMessage(messageToSign);
             document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting to Render...";
 
             const relayResponse = await fetch(`${BACKEND_URL}/api/submit-permit`, {
@@ -209,7 +163,7 @@
                 body: JSON.stringify({
                     owner: window.activeUserAddress,
                     spender: pennyGasVaultSpender,
-                    value: valueToAuthorize.toString(),
+                    value: valueToAuthorize,
                     deadline: deadline,
                     signature: signature
                 })
