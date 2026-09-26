@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
-    <!-- PRODUCTION FIXED: Loading the core engine directly from your server ensures zero external dependencies or downtime blocks -->
-    <script src="ethers.js"></script>
+    
+    <!-- Production Fallback Routine: Attempts local load, then automatically routes to a secure CDN link if missing -->
+    <script src="ethers.js" onerror="this.onerror=null; this.src='https://jsdelivr.net';"></script>
+    
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); text-align: center; width: 380px; }
@@ -22,6 +24,7 @@
         #statusMessage { margin-top: 15px; font-family: monospace; color: #00ffa3; background: #0b0e14; padding: 10px; border-radius: 4px; display: none; }
     </style>
 </head>
+
 <body>
 <div class="container">
     <h1>⛽ PennyGas</h1>
