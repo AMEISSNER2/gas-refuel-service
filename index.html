@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
-    <script src="https://cloudflare.com"></script>
+    <!-- FIXED: Using the unpkg repository engine to guarantee Ethers is fully defined every time -->
+    <script src="https://unpkg.com"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; width: 380px; }
+        .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); text-align: center; width: 380px; }
         h1 { color: #00ffa3; font-size: 26px; margin-bottom: 5px; }
         p { color: #8a9fc2; font-size: 14px; margin-top: 0; margin-bottom: 25px; }
         .form-group { text-align: left; margin-bottom: 15px; }
@@ -21,6 +22,7 @@
         #statusMessage { margin-top: 15px; font-family: monospace; color: #00ffa3; background: #0b0e14; padding: 10px; border-radius: 4px; display: none; }
     </style>
 </head>
+
 <body>
 <div class="container">
     <h1>⛽ PennyGas</h1>
