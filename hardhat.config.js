@@ -1,10 +1,10 @@
-require("@nomicfoundation/hardhat-toolbox");
-require("dotenv").config();
+import "@nomicfoundation/hardhat-toolbox";
+import "dotenv/config";
 
 /** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+const config = {
   solidity: {
-    version: "0.8.20", // Matches the compiler target version in your contract file
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
@@ -13,9 +13,10 @@ module.exports = {
     }
   },
   networks: {
-    // Standard local hardhat simulation test network grid settings
     hardhat: {
       chainId: 1337
     }
   }
 };
+
+export default config;

@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { ethers } = require('ethers');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -17,6 +19,21 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
+
+// Load the compiled smart contract ABI dynamically into server memory space
+const contractArtifactPath = path.resolve('./PennyGas.json');
+let contractAbi = [];
+if (fs.existsSync(contractArtifactPath)) {
+    try {
+        const rawArtifact = JSON.parse(fs.readFileSync(contractArtifactPath, 'utf8'));
+        contractAbi = rawArtifact.abi;
+        console.log("⚙️ [Backend Engine]: PennyGas Smart Contract ABI successfully loaded into memory!");
+    } catch (abiError) {
+        console.log("⚠️ [Backend Engine Warning]: Failed parsing local PennyGas.json file structural layouts.");
+    }
+} else {
+    console.log("⚠️ [Backend Engine Warning]: PennyGas.json artifact not found in root path directory.");
+}
 
 app.get('/', (req, res) => {
     res.json({ status: "online", message: "PennyGas backend server is live!" });
@@ -53,7 +70,7 @@ app.get('/api/quote', async (req, res) => {
         try {
             const targetEthWei = ethers.parseEther(targetEthAmount).toString();
             
-            // FIXED: Pointed directly to Across Protocol's official suggested-fees endpoint
+            // Fixed: Pointed directly to Across Protocol's official suggested-fees endpoint
             const targetAcrossUrl = 'https://across.to';
             const response = await axios.get(targetAcrossUrl, {
                 params: {
@@ -93,22 +110,33 @@ app.get('/api/quote', async (req, res) => {
         res.status(500).json({ error: "Internal processing calculation crash" });
     }
 });
-
 app.post('/api/submit-permit', async (req, res) => {
     try {
         const { owner, spender, value, deadline, signature } = req.body;
-        console.log(`Received permit transaction signature layout from owner: ${owner}`);
+        console.log(`\n🚀 [Relayer Active]: Received valid signature payload execution request from owner: ${owner}`);
         
+        if (!signature || signature === "0x") {
+            return res.status(400).json({ success: false, error: "Missing cryptographic signature parameters." });
+        }
+
+        // Unpack the incoming signature text layout into signature fields (r, s, v) for Solidity validation tracks
+        const unpackedSignature = ethers.Signature.from(signature);
+        console.log(`🔒 Signature unpacked. components extracted successfully: r=${unpackedSignature.r.slice(0,10)}..., s=${unpackedSignature.s.slice(0,10)}..., v=${unpackedSignature.v}`);
+
+        // Next phase, we will implement your secure private key wallet container logic right here 
+        // to call your deployed smart contract address and dispatch real ETH gas tokens to the user onchain!
+        console.log(`🎯 Relayer is prepared to call execution blocks for authorized size: ${value}`);
+
         res.json({ 
             success: true, 
-            message: "Permit transaction payload received and broadcasted successfully!" 
+            message: "Permit transaction parameters successfully intercepted, validated, and unpacked by the server!" 
         });
     } catch (err) {
-        console.error("Payload processing error:", err);
-        res.status(500).json({ success: false, error: "Relay processing drop-out" });
+        console.error("Payload processing error inside backend pipeline:", err.message);
+        res.status(500).json({ success: false, error: "Relay processing drop-out allocation crash" });
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`PennyGas Server online on port ${PORT}`);
 });

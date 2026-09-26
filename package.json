@@ -19,9 +19,7 @@
     "express": "^4.19.2"
   },
   "devDependencies": {
-    "hardhat": "^3.18.0"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true
+    "hardhat": "^2.22.10",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0"
   }
 }
