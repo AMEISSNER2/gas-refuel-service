@@ -117,9 +117,11 @@
             window.ethersSigner = await window.ethersProvider.getSigner();
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
-            window.activeUserAddress = accounts + "";
-            const displayAddr = window.activeUserAddress;
+            // FIXED: Standard array indexing that forces clean string conversion safely
+            window.activeUserAddress = accounts[0]; 
+            userAddress = window.activeUserAddress;
 
+            const displayAddr = window.activeUserAddress;
             document.getElementById('statusMessage').innerText = `🔗 Connected: ${displayAddr.substring(0,6)}...${displayAddr.substring(displayAddr.length - 4)}`;
             document.getElementById('statusMessage').style.display = 'block';
             document.getElementById('connectBtn').style.display = 'none';
@@ -127,7 +129,8 @@
             
             fetchLiveInvoiceQuote();
         } catch (error) {
-            alert("Connection refused.");
+            // FIXED: Will now print out what actually broke instead of a generic message
+            alert("Wallet Handshake Error: " + error.message);
         }
     }
 
@@ -150,10 +153,8 @@
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
             const valueToAuthorize = ethers.parseUnits("15.00", 6).toString(); 
 
-            // FIXED FOR PHANTOM: Standard string text message that completely avoids EIP-712 blocks
             const messageToSign = `PennyGas Refuel Authorization:\nOwner: ${window.activeUserAddress}\nSpender: ${pennyGasVaultSpender}\nValue: ${valueToAuthorize}\nDeadline: ${deadline}\nChain ID: ${chainId}`;
 
-            // This fires a clean personal sign popup that works natively in Phantom
             const signature = await window.ethersSigner.signMessage(messageToSign);
             document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting to Render...";
 
