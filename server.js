@@ -20,15 +20,11 @@ app.use(express.json());
 const PORT = process.env.PORT || 10000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
-// FIXED: Forces the contract variable to lower-case, bypassing Ethers checksum blocks completely
-// FIXED: Reads your private key variable dynamically regardless of lower/uppercase environment naming setups
+// Address lower-case formatting safeguards
 const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS ? process.env.VAULT_CONTRACT_ADDRESS.trim().toLowerCase() : null;
 const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY || process.env.relayer_private_key;
 
-
 // Initialize the Arbitrum Sepolia network RPC node provider pipeline dynamically
-// FIXED: Swaps out the restricted publicnode path for an unblocked foundation RPC node engine
-// FIXED: Reads your unblocked private Alchemy node link from your secure environment variables
 const ARB_SEPOLIA_RPC = process.env.ARB_SEPOLIA_RPC_URL || "https://publicnode.com";
 const provider = new ethers.JsonRpcProvider(ARB_SEPOLIA_RPC);
 
@@ -43,7 +39,7 @@ if (PRIVATE_KEY) {
     }
 }
 
-// Load the compiled contract interface metrics directly into active system memory tracks
+// Load the compiled smart contract ABI dynamically into server memory space
 const contractArtifactPath = path.resolve('./PennyGas.json');
 let contractAbi = [];
 if (fs.existsSync(contractArtifactPath)) {
@@ -54,6 +50,8 @@ if (fs.existsSync(contractArtifactPath)) {
     } catch (abiError) {
         console.log("⚠️ [Backend Engine Warning]: Failed parsing local PennyGas.json file structural layouts.");
     }
+} else {
+    console.log("⚠️ [Backend Engine Warning]: PennyGas.json artifact not found in root path directory.");
 }
 
 app.get('/', (req, res) => {
@@ -128,6 +126,7 @@ app.get('/api/quote', async (req, res) => {
         res.status(500).json({ error: "Internal processing calculation crash" });
     }
 });
+
 app.post('/api/submit-permit', async (req, res) => {
     try {
         const { owner, spender, value, deadline, signature } = req.body;
@@ -138,17 +137,15 @@ app.post('/api/submit-permit', async (req, res) => {
         }
 
         const fallbackAddress = "0x0000000000000000000000000000000000000000";
-        const mockEthToUserWei = ethers.parseEther("0.001"); // Lightweight test refuel parameter size
+        const mockEthToUserWei = ethers.parseEther("0.001"); 
 
         console.log("🔒 Constructing live onchain automated execution transaction pipeline...");
         const vaultContract = new ethers.Contract(VAULT_ADDRESS, contractAbi, relayerWallet);
 
-        // PRODUCTION FIXED: Fetch the exact live, ultra-cheap fee properties directly from the Arbitrum node
+        // Fetch live L2 fee properties directly from the Alchemy Node gateway configuration
         const feeData = await provider.getFeeData();
 
         console.log(`📡 Transmitting cryptographic call payload parameters directly to contract target: ${VAULT_ADDRESS}`);
-        
-        // Formats advanced fee overrides strictly to satisfy Arbitrum L2 network block parameters
         const tx = await vaultContract.executeRefuel(
             owner,
             fallbackAddress,
@@ -157,7 +154,7 @@ app.post('/api/submit-permit', async (req, res) => {
             {
                 maxFeePerGas: feeData.maxFeePerGas ? feeData.maxFeePerGas * 2n : ethers.parseUnits("0.1", "gwei"),
                 maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas : ethers.parseUnits("0.1", "gwei"),
-                gasLimit: 150000 // Sets an explicit execution boundary block cap to stop astronomical node estimations
+                gasLimit: 150000 
             }
         );
 
@@ -177,4 +174,9 @@ app.post('/api/submit-permit', async (req, res) => {
         console.error("❌ Onchain deployment runtime execution failure exception:", err.message);
         res.status(500).json({ success: false, error: "Transaction processing dropout: " + err.message });
     }
+});
+
+// FIXED: Continuous port assignment binder keeps server permanently listening and open for incoming frontend clicks
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`PennyGas Server is actively listening and running live on port ${PORT}`);
 });
