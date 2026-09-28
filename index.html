@@ -169,15 +169,18 @@
                 })
             });
 
-            const relayData = await relayResponse.json();
-	    alert(`Success! Onchain Refuel Complete!\nTransaction Tracking Hash: ${relayData.transactionHash}`);
-            document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
+// Parse the server's successful JSON property tracks cleanly
+const relayData = await relayResponse.json();
 
-        } catch (error) {
-            console.error(error);
-            document.getElementById('statusMessage').innerText = "❌ Signing failed.";
-            alert("Authorization dropped: " + error.message);
-        }
+if (relayData.success) {
+    // FIXED: Reads the exact 'transactionHash' property string sent down by your Render server
+    alert(`🎉 Success! Onchain Refuel Complete!\n\nMessage: ${relayData.message}\n\nTx Hash: ${relayData.transactionHash}`);
+    document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
+} else {
+    alert(`❌ Server error: ${relayData.error}`);
+    document.getElementById('statusMessage').innerText = "❌ Processing dropped.";
+}
+
     }
 </script>
 </body>
