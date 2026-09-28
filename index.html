@@ -170,7 +170,7 @@
             });
 
             const relayData = await relayResponse.json();
-            alert(`Success! Backend replied: ${relayData.message}`);
+	    alert(`Success! Onchain Refuel Complete!\nTransaction Tracking Hash: ${relayData.transactionHash}`);
             document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
 
         } catch (error) {
