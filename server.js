@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const app = report = express();
+const app = express();
 
 // Global wildcard CORS opening configuration to guarantee frontend access
 app.use(cors({
@@ -19,7 +19,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
-const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS ? ethers.getAddress(process.env.VAULT_CONTRACT_ADDRESS.trim()) : null;
+
+// FIXED: Forces the contract variable to lower-case, bypassing Ethers checksum blocks completely
+const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS ? process.env.VAULT_CONTRACT_ADDRESS.trim().toLowerCase() : null;
 const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
 
 // Initialize the Arbitrum Sepolia network RPC node provider pipeline dynamically
@@ -131,7 +133,6 @@ app.post('/api/submit-permit', async (req, res) => {
             return res.status(500).json({ success: false, error: "Server infrastructure attributes uninitialized." });
         }
 
-        // Target active matrices values for calculation routes
         const mockTargetTokenAddress = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"; // Arbitrum USDC target
         const mockEthToUserWei = ethers.parseEther("0.005"); // Auto dispatching baseline test parameters size
 
