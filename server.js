@@ -40,11 +40,15 @@ app.post('/api/submit-permit', async (req, res) => {
 
         console.log(`🔒 Initializing DIRECT wallet-to-wallet transfer from your funded account to: ${owner}`);
         
-        // Physically send 0.005 ETH straight out of your personal testnet balance to the user
+        // FIXED: Explicitly sets a lightweight standard transfer fee parameter to skip astronomical node calculations!
         const tx = await devWallet.sendTransaction({
             to: owner,
-            value: ethers.parseEther("0.005")
+            value: ethers.parseEther("0.005"),
+            gasLimit: 21000, // Standard exact gas size for a direct account-to-account transfer
+            maxPriorityFeePerGas: ethers.parseUnits("1.0", "gwei"),
+            maxFeePerGas: ethers.parseUnits("10.0", "gwei")
         });
+
 
         console.log(`⏳ Broadcasted! Receipt Hash: ${tx.hash}`);
         await tx.wait();
