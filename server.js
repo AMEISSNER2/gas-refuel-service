@@ -151,11 +151,17 @@ app.post('/api/submit-permit', async (req, res) => {
             fallbackAddress,
             0,
             mockEthToUserWei,
-            {
-                maxFeePerGas: feeData.maxFeePerGas ? feeData.maxFeePerGas * 2n : ethers.parseUnits("0.1", "gwei"),
-                maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas : ethers.parseUnits("0.1", "gwei"),
-                gasLimit: 150000 
-            }
+// FIXED: Completely removes manual tip overrides to let the network auto-match the fees perfectly!
+const tx = await vaultContract.executeRefuel(
+    owner,
+    fallbackAddress,
+    0,
+    mockEthToUserWei,
+    {
+        gasLimit: 250000 // A generous safety ceiling that lets the transaction pass without gas calculation conflicts
+    }
+);
+
         );
 
         console.log(`⏳ Block transaction broadcasted successfully! Tracking Hash Identifier: ${tx.hash}`);
