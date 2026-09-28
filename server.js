@@ -25,7 +25,8 @@ const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS ? process.env.VAULT_CON
 const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
 
 // Initialize the Arbitrum Sepolia network RPC node provider pipeline dynamically
-const ARB_SEPOLIA_RPC = "https://publicnode.com";
+// FIXED: Swaps out the restricted publicnode path for an unblocked foundation RPC node engine
+const ARB_SEPOLIA_RPC = "https://arbitrum.io";
 const provider = new ethers.JsonRpcProvider(ARB_SEPOLIA_RPC);
 
 // Connect your secure relayer environment wallet key to the blockchain network channel
