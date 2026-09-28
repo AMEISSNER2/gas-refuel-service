@@ -10,8 +10,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-// Connect directly to the ETH Sepolia network where your 0.05989 ETH balance actually lives!
-const provider = new ethers.JsonRpcProvider("https://alchemy.com" + (process.env.ARB_SEPOLIA_RPC_URL ? process.env.ARB_SEPOLIA_RPC_URL.split('/').pop() : ""));
+// FIXED: Reads your dedicated Ethereum Sepolia node link directly with zero string splitting hacks!
+const ETH_SEPOLIA_RPC = process.env.ETH_SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
+const provider = new ethers.JsonRpcProvider(ETH_SEPOLIA_RPC);
 const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
 
 let devWallet = null;
