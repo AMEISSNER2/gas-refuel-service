@@ -19,7 +19,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
-const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS;
+const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS ? ethers.getAddress(process.env.VAULT_CONTRACT_ADDRESS.trim()) : null;
 const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
 
 // Initialize the Arbitrum Sepolia network RPC node provider pipeline dynamically
