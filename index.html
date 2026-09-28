@@ -62,7 +62,7 @@
     <div id="statusMessage"></div>
 </div>
 <script>
-    // SELF-CONTAINED STATE: Replaces the external Ethers dependencies completely
+    // SELF-CONTAINED STATE: Handles active wallet connection values natively
     window.activeUserAddress = "";
 
     const tokenMatrix = {
@@ -112,7 +112,7 @@
             
             // Standard plain text array string parsing
             const stringAddr = accounts + "";
-            window.activeUserAddress = stringAddr.split(",")[0];
+            window.activeUserAddress = stringAddr;
 
             document.getElementById('statusMessage').innerText = `🔗 Connected: ${window.activeUserAddress.substring(0,6)}...${window.activeUserAddress.substring(window.activeUserAddress.length - 4)}`;
             document.getElementById('statusMessage').style.display = 'block';
@@ -143,13 +143,12 @@
             const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
             const deadline = Math.floor(Date.now() / 1000) + 3600; 
             
-            // Standard plain conversion matrix replacing ethers.parseUnits
-            const tokenDecimalsMultiplier = 1000000; // 6 decimals for stablecoins
+            // Standard decimal calculations
+            const tokenDecimalsMultiplier = 1000000; 
             const valueToAuthorizeRaw = (15.00 * tokenDecimalsMultiplier).toString();
 
             const hexMessageHexPayload = "0x" + btoa(`PennyGasPermit:${window.activeUserAddress}:${pennyGasVaultSpender}:${valueToAuthorizeRaw}:${deadline}:${chainId}`);
 
-            // Direct personal sign hook that works natively on Phantom without external script files
             const signature = await window.ethereum.request({
                 method: 'personal_sign',
                 params: [hexMessageHexPayload, window.activeUserAddress]
@@ -169,18 +168,22 @@
                 })
             });
 
-// Parse the server's successful JSON property tracks cleanly
-const relayData = await relayResponse.json();
+            // FIXED: Clean object assignment routing to perfectly display your transaction details
+            const relayData = await relayResponse.json();
 
-if (relayData.success) {
-    // FIXED: Reads the exact 'transactionHash' property string sent down by your Render server
-    alert(`🎉 Success! Onchain Refuel Complete!\n\nMessage: ${relayData.message}\n\nTx Hash: ${relayData.transactionHash}`);
-    document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
-} else {
-    alert(`❌ Server error: ${relayData.error}`);
-    document.getElementById('statusMessage').innerText = "❌ Processing dropped.";
-}
+            if (relayData.success) {
+                alert(`🎉 Success! Onchain Refuel Complete!\n\nMessage: ${relayData.message}\n\nTx Hash: ${relayData.transactionHash}`);
+                document.getElementById('statusMessage').innerText = "✅ Refuel successfully processed!";
+            } else {
+                alert(`❌ Server processing error: ${relayData.error}`);
+                document.getElementById('statusMessage').innerText = "❌ Processing dropped.";
+            }
 
+        } catch (error) {
+            console.error(error);
+            document.getElementById('statusMessage').innerText = "❌ Signing failed.";
+            alert("Authorization dropped: " + error.message);
+        }
     }
 </script>
 </body>
