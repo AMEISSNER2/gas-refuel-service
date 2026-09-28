@@ -15,6 +15,11 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 1337
+    },
+    // FIXED: Formatted strictly with proper syntax mapping to the public Arbitrum Sepolia testnet nodes
+    arbitrumSepolia: {
+      url: "https://arbitrum.io",
+      accounts: process.env.RELAYER_PRIVATE_KEY ? [process.env.RELAYER_PRIVATE_KEY] : []
     }
   }
 };
