@@ -137,32 +137,33 @@ app.post('/api/submit-permit', async (req, res) => {
             return res.status(500).json({ success: false, error: "Server infrastructure attributes uninitialized." });
         }
 
-        const mockTargetTokenAddress = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"; // Arbitrum USDC target
-        const mockEthToUserWei = ethers.parseEther("0.005"); // Auto dispatching baseline test parameters size
+        const fallbackAddress = "0x0000000000000000000000000000000000000000";
+        const mockEthToUserWei = ethers.parseEther("0.001"); // Lightweight test refuel parameter size
 
         console.log("🔒 Constructing live onchain automated execution transaction pipeline...");
-        
-        // Connect our secure active relayer identity instance handler directly to your contract address coordinates
         const vaultContract = new ethers.Contract(VAULT_ADDRESS, contractAbi, relayerWallet);
 
-        // LIVE BLOCKCHAIN EXECUTION: Call the executeRefuel function directly on your contract layout
+        // PRODUCTION FIXED: Fetch the exact live, ultra-cheap fee properties directly from the Arbitrum node
+        const feeData = await provider.getFeeData();
+
         console.log(`📡 Transmitting cryptographic call payload parameters directly to contract target: ${VAULT_ADDRESS}`);
-// FIXED: Passing a 0 value token bypasses the USDC allowance blocks completely for our test run!
-const nativeTokenFallbackAddress = "0x0000000000000000000000000000000000000000";
-
-console.log(`📡 Transmitting cryptographic call payload parameters directly to contract target: ${VAULT_ADDRESS}`);
-const tx = await vaultContract.executeRefuel(
-    owner,
-    nativeTokenFallbackAddress,
-    0,                             // Sets required stablecoins to zero so it doesn't block the transaction
-    ethers.parseEther("0.001")     // Dispatches a lightweight 0.001 ETH refuel test parameter size
-);
-
+        
+        // Formats advanced fee overrides strictly to satisfy Arbitrum L2 network block parameters
+        const tx = await vaultContract.executeRefuel(
+            owner,
+            fallbackAddress,
+            0,
+            mockEthToUserWei,
+            {
+                maxFeePerGas: feeData.maxFeePerGas ? feeData.maxFeePerGas * 2n : ethers.parseUnits("0.1", "gwei"),
+                maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? feeData.maxPriorityFeePerGas : ethers.parseUnits("0.1", "gwei"),
+                gasLimit: 150000 // Sets an explicit execution boundary block cap to stop astronomical node estimations
+            }
+        );
 
         console.log(`⏳ Block transaction broadcasted successfully! Tracking Hash Identifier: ${tx.hash}`);
         console.log("⏳ Awaiting network mining confirmation verification loops...");
         
-        // Wait for the public block confirmation registers to permanently settle the transaction ledger metrics
         const receipt = await tx.wait();
         console.log(`✅ Transaction fully processed and mined in block: ${receipt.blockNumber}`);
 
@@ -176,8 +177,4 @@ const tx = await vaultContract.executeRefuel(
         console.error("❌ Onchain deployment runtime execution failure exception:", err.message);
         res.status(500).json({ success: false, error: "Transaction processing dropout: " + err.message });
     }
-});
-
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`PennyGas Server online on port ${PORT}`);
 });
