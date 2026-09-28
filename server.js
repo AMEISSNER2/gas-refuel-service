@@ -20,7 +20,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 10000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
-// Address lower-case formatting safeguards
+// Address lower-case formatting safeguards to satisfy Ethers validations
 const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS ? process.env.VAULT_CONTRACT_ADDRESS.trim().toLowerCase() : null;
 const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY || process.env.relayer_private_key;
 
@@ -142,26 +142,18 @@ app.post('/api/submit-permit', async (req, res) => {
         console.log("🔒 Constructing live onchain automated execution transaction pipeline...");
         const vaultContract = new ethers.Contract(VAULT_ADDRESS, contractAbi, relayerWallet);
 
-        // Fetch live L2 fee properties directly from the Alchemy Node gateway configuration
-        const feeData = await provider.getFeeData();
-
         console.log(`📡 Transmitting cryptographic call payload parameters directly to contract target: ${VAULT_ADDRESS}`);
+        
+        // DYNAMIC FIX: Removed manual maxFee / priorityFee estimation structures entirely. 
+        // Ethers will now automatically fetch real-time matching network fee metrics directly from the node!
         const tx = await vaultContract.executeRefuel(
             owner,
             fallbackAddress,
             0,
             mockEthToUserWei,
-// FIXED: Completely removes manual tip overrides to let the network auto-match the fees perfectly!
-const tx = await vaultContract.executeRefuel(
-    owner,
-    fallbackAddress,
-    0,
-    mockEthToUserWei,
-    {
-        gasLimit: 250000 // A generous safety ceiling that lets the transaction pass without gas calculation conflicts
-    }
-);
-
+            {
+                gasLimit: 250000 // High safety ceiling that easily fits the transaction execution execution steps
+            }
         );
 
         console.log(`⏳ Block transaction broadcasted successfully! Tracking Hash Identifier: ${tx.hash}`);
@@ -182,7 +174,7 @@ const tx = await vaultContract.executeRefuel(
     }
 });
 
-// FIXED: Continuous port assignment binder keeps server permanently listening and open for incoming frontend clicks
+// Port holder script keeps server permanently listening open for incoming frontend traffic
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`PennyGas Server is actively listening and running live on port ${PORT}`);
 });
