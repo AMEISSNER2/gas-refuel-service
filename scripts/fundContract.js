@@ -1,27 +1,37 @@
 const hre = require("hardhat");
+require("dotenv").config();
 
 async function main() {
-  // Clean and format the address string to satisfy strict Ethers checksum rules
-  const rawTargetAddress = "0x0E58508668003e1eA9C0D0319db166717860B24C".trim().toLowerCase();
-  const amountToDeposit = hre.ethers.parseEther("0.02"); // Pushes a solid 0.02 ETH buffer into your contract tank
+  const targetContract = "0x0e58508668003e1ea9c0d0319db166717860b24c";
+  const amountToDeposit = hre.ethers.parseEther("0.02");
 
-  console.log(`⏳ Initializing direct onchain funding pipeline...`);
+  console.log(`⏳ Initializing funding pipeline using your private Alchemy node...`);
 
-  // 1. Fetch your secure relayer account identity straight from your local keys
-  const [relayerSigner] = await hre.ethers.getSigners();
-  console.log(`📡 Wallet Identity Authenticated: ${relayerSigner.address}`);
+  const relayerPrivateKey = process.env.RELAYER_PRIVATE_KEY;
+  if (!relayerPrivateKey) {
+      throw new Error("Missing RELAYER_PRIVATE_KEY inside your local .env file setup.");
+  }
 
-  // 2. Broadcast a direct transfer transaction onto the network with explicit L2 fee parameters
-  const tx = await relayerSigner.sendTransaction({
-    to: rawTargetAddress,
+  // FIXED: Instead of hardcoding public URLs that get blocked, we read your private, whitelisted Alchemy URL straight out of your local .env file
+  const privateNodeUrl = process.env.ARB_SEPOLIA_RPC_URL;
+  if (!privateNodeUrl) {
+      throw new Error("Missing ARB_SEPOLIA_RPC_URL inside your local .env file. Please open your .env file and add a line like: ARB_SEPOLIA_RPC_URL=your_alchemy_url_here");
+  }
+
+  const rawProvider = new hre.ethers.JsonRpcProvider(privateNodeUrl);
+  const rawWallet = new hre.ethers.Wallet(relayerPrivateKey, rawProvider);
+  console.log(`📡 Secure Wallet Connected: ${rawWallet.address}`);
+
+  const txRequest = {
+    to: targetContract,
     value: amountToDeposit,
-    gasLimit: 100000, // Generous gas limit cap guarantees it clears the L2 compression data gates
-    maxPriorityFeePerGas: hre.ethers.parseUnits("0.1", "gwei"),
-    maxFeePerGas: hre.ethers.parseUnits("0.2", "gwei")
-  });
+    gasLimit: 50000 
+  };
 
-  console.log(`🚀 Transaction broadcasted! Tracking Hash: ${tx.hash}`);
-  console.log(`⏳ Awaiting block confirmation registers...`);
+  const tx = await rawWallet.sendTransaction(txRequest);
+
+  console.log(`🚀 Transaction broadcasted successfully! Tracking Hash: ${tx.hash}`);
+  console.log(`⏳ Awaiting network block confirmation registers...`);
   
   await tx.wait();
   console.log(`\n========================================================================`);
@@ -30,6 +40,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("❌ Funding script encountered an exception:", error);
+  console.error("❌ Funding script encountered an exception:", error.message);
   process.exitCode = 1;
 });
