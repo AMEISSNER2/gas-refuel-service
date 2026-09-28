@@ -21,8 +21,10 @@ const PORT = process.env.PORT || 10000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
 // FIXED: Forces the contract variable to lower-case, bypassing Ethers checksum blocks completely
+// FIXED: Reads your private key variable dynamically regardless of lower/uppercase environment naming setups
 const VAULT_ADDRESS = process.env.VAULT_CONTRACT_ADDRESS ? process.env.VAULT_CONTRACT_ADDRESS.trim().toLowerCase() : null;
-const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
+const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY || process.env.relayer_private_key;
+
 
 // Initialize the Arbitrum Sepolia network RPC node provider pipeline dynamically
 // FIXED: Swaps out the restricted publicnode path for an unblocked foundation RPC node engine
