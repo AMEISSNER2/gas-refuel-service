@@ -18,8 +18,10 @@ module.exports = {
     },
     // FIXED: Formatted strictly with proper syntax mapping to the public Arbitrum Sepolia testnet nodes
     arbitrumSepolia: {
-      url: "https://arbitrum.io",
+      // FIXED: Using an alternative foundation RPC gateway to slide right past Cloudflare firewalls
+      url: "https://blockpi.network",
       accounts: process.env.RELAYER_PRIVATE_KEY ? [process.env.RELAYER_PRIVATE_KEY] : []
     }
+
   }
 };
