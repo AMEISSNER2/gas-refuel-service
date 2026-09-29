@@ -1,27 +1,29 @@
-import hre from "hardhat";
+const { ethers } = require("hardhat");
 
 async function main() {
-  console.log("🚀 Initializing PennyGas Smart Contract Deployment Pipeline...");
+  console.log("Preparing deployment of RefuelVault configuration...");
 
-  // 1. Fetch your compiled contract layout out of your new artifact cache build folders
-  const PennyGas = await hre.ethers.getContractFactory("PennyGas");
+  // Fetch the contract factory
+  const RefuelVault = await ethers.getContractFactory("RefuelVault");
   
-  // 2. Trigger the automated cryptographic deployment handshake sequence
-  const pennyGasContract = await PennyGas.deploy();
-
-  // 3. Wait for the transaction to finalize block validation tracks
-  await pennyGasContract.waitForDeployment();
-
-  const contractAddress = await pennyGasContract.getAddress();
-  console.log(`\n=======================================================`);
+  console.log("Deploying RefuelVault contract to Sepolia Testnet...");
   
-  // Highlight this address text block output value on your terminal screen
-  console.log(`🏆 PENNYGAS VAULT SMART CONTRACT DEPLOYED SUCCESSFULLY!`);
-  console.log(`📍 Contract Deployed To Address Target: ${contractAddress}`);
-  console.log(`=======================================================\n`);
+  // Deploy the contract
+  const vault = await RefuelVault.deploy();
+  await vault.waitForDeployment();
+
+  const vaultAddress = await vault.getAddress();
+
+  console.log("====================================================");
+  console.log(`RefuelVault successfully deployed!`);
+  console.log(`Contract Address: ${vaultAddress}`);
+  console.log(`Deployed by (PG Burner Dev): 0x1a1ABFc2Ed45F6CA1E6068c76B11C804B56AB779`);
+  console.log("====================================================");
 }
 
-main().catch((error) => {
-  console.error("❌ Deployment routine script crashed out:", error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

@@ -26,7 +26,7 @@ interface IWETH {
     function withdraw(uint256 wad) external;
 }
 
-contract PennyGas {
+contract RefuelVault {
     address public owner;
     
     // Checksum Bypass Channels: Converted to state storage properties to isolate string validation lines
