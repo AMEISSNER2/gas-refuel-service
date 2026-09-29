@@ -179,7 +179,7 @@
 
             if (relayData.success) {
                 // FIXED: Includes the missing '\$' syntax and proper sub-path directories to build a real Etherscan URL
-                const etherscanLink = `https://etherscan.io{relayData.transactionHash}`;
+                const etherscanLink = `https://etherscan.io${relayData.transactionHash}`;
                 
                 alert(`🎉 Success! Onchain Refuel Complete!\n\nMessage: ${relayData.message}`);
                 
