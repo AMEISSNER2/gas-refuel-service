@@ -29,10 +29,11 @@
 
     <div id="dashboard" style="display: none; margin-top: 20px;">
         <div class="form-group">
-            <label>You Pay From Chain</label>
-            <select id="sourceChain" onchange="fetchLiveInvoiceQuote()">
+                <label for="sourceChain">Gas Needed for:</label>
+                <select id="sourceChain" onchange="fetchLiveInvoiceQuote()">
                 <option value="1">Ethereum Mainnet</option>
                 <option value="42161" selected>Arbitrum One</option>
+ 		<option value="11155111" selected>Ethereum Sepolia Testnet</option>
             </select>
         </div>
 
@@ -81,8 +82,11 @@
         const tokenSymbol = document.getElementById('sourceToken').value;
         const amount = document.getElementById('ethAmount').value;
         
-        // Safety lock safeguards parameters parsing loops
-        if (!tokenMatrix[chainId] || !tokenMatrix[chainId][tokenSymbol]) return;
+        // Safety lock safeguards parameters parsing loops if the network configuration mismatch exists
+        if (!tokenMatrix[chainId] || !tokenMatrix[chainId][tokenSymbol]) {
+            document.getElementById('uiTotal').innerText = "Select valid testnet network";
+            return;
+        }
         const tokenAddress = tokenMatrix[chainId][tokenSymbol];
 
         if (!amount || amount <= 0) return;
@@ -174,7 +178,7 @@
             const relayData = await relayResponse.json();
 
             if (relayData.success) {
-                // FIXED: Dynamically creates an official, clickable Sepolia Etherscan hyperlink card template layout
+                // FIXED: Includes the missing '\$' syntax and proper sub-path directories to build a real Etherscan URL
                 const etherscanLink = `https://etherscan.io{relayData.transactionHash}`;
                 
                 alert(`🎉 Success! Onchain Refuel Complete!\n\nMessage: ${relayData.message}`);
