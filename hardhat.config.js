@@ -16,10 +16,10 @@ module.exports = {
     hardhat: {
       chainId: 1337
     },
-    // FIXED: Formatted strictly with proper syntax mapping to the public Arbitrum Sepolia testnet nodes
-    arbitrumSepolia: {
-      // PROD FIXED: Official PublicNode infrastructure with zero redirect blocks or firewalls
-      url: "https://arbitrum-sepolia-rpc.publicnode.com",
+    // FIXED: Maps hardhat compile deployments directly to your unblocked Ethereum Sepolia endpoint credentials
+    sepolia: {
+      url: process.env.ARB_SEPOLIA_RPC_URL || process.env.ETH_SEPOLIA_RPC_URL || "https://publicnode.com",
       accounts: process.env.RELAYER_PRIVATE_KEY ? [process.env.RELAYER_PRIVATE_KEY] : []
-    }  }
+    }
+  }
 };
