@@ -14,7 +14,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// ENFORCE PORT 9000 MANDATORY BINDING
+// FIXED FOR PORT 9000 BINDING EXCLUSIVELY
 const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
 
 /**
  * GET /api/quote
- * Explicitly matches the endpoint name your index.html requests for live quotes
+ * Explicitly prefixed path mapping to clear browser console 404 errors
  */
 app.get('/api/quote', async (req, res) => {
     const originChainId = req.query.originChainId || 11155111;
@@ -46,7 +46,7 @@ app.get('/api/quote', async (req, res) => {
                 ethPriceUsd = Number(rawPrice) / 1e8;
             }
         } catch (e) {
-            console.log("Oracle retrieval bypassed:", e.message);
+            console.log("Oracle price processing fallback applied:", e.message);
         }
 
         let bridgeFeeEth = 0.000050; 
@@ -66,7 +66,7 @@ app.get('/api/quote', async (req, res) => {
                 bridgeFeeEth = parseFloat(ethers.formatEther(response.data.totalRelayFee.total || "0"));
             }
         } catch (bErr) {
-            console.log("Across endpoint query error fallback applied:", bErr.message);
+            console.log("Across endpoint response fallback applied:", bErr.message);
         }
 
         const baseCostEth = parseFloat(targetEthAmount) + bridgeFeeEth;
@@ -94,7 +94,7 @@ app.get('/api/quote', async (req, res) => {
 
 /**
  * POST /api/refuel
- * FIXED ENDPOINT NAME: Changed from /api/submit-permit to perfectly match your index.html post request
+ * Prefixed route mapping listening for cryptographic coordinates signature payloads
  */
 app.post('/api/refuel', async (req, res) => {
     try {
@@ -123,5 +123,5 @@ app.post('/api/refuel', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`⛽ PennyGas Server online and strictly listening on port ${PORT}`);
+    console.log(`⛽ PennyGas Server online and actively listening on port ${PORT}`);
 });
