@@ -14,7 +14,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// STRICT HARDCODED BACKEND PORT BINDING:
+// ENFORCE PORT 9000 STRICTLY:
 const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
@@ -24,15 +24,14 @@ app.get('/', (req, res) => {
 
 /**
  * GET /api/quote
- * Refactored parameters calculation routine with validation fallbacks
+ * Explicitly exposed route layout matching frontend fetch query expectations exactly
  */
 app.get('/api/quote', async (req, res) => {
-    // Parameter interceptor fallback mapping
-    const originChainId = req.query.originChainId || 11155111;
-    const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-    const targetEthAmount = req.query.targetEthAmount || "0.01";
-
     try {
+        const originChainId = req.query.originChainId || 11155111;
+        const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+        const targetEthAmount = req.query.targetEthAmount || "0.01";
+
         let ethPriceUsd = 2696.02; 
         try {
             const rpcUrl = process.env.ETH_MAINNET_RPC_URL;
@@ -67,7 +66,7 @@ app.get('/api/quote', async (req, res) => {
                 bridgeFeeEth = parseFloat(ethers.formatEther(response.data.totalRelayFee.total || "0"));
             }
         } catch (bErr) {
-            console.log("Across endpoint error fallback applied:", bErr.message);
+            console.log("Across endpoint query fallback applied:", bErr.message);
         }
 
         const baseCostEth = parseFloat(targetEthAmount) + bridgeFeeEth;
