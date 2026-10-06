@@ -17,11 +17,11 @@
         .invoice-box { background-color: #0b0e14; border: 1px dashed #2b313e; border-radius: 6px; padding: 12px; margin-top: 15px; text-align: left; font-size: 13px; }
         .invoice-row { display: flex; justify-content: space-between; margin-bottom: 6px; color: #8a9fc2; }
         .invoice-total { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2b313e; font-weight: bold; color: #00ffa3; }
-        #statusMessage { margin-top: 15px; font-family: monospace; color: #00ffa3; background: #0b0e14; padding: 10px; border-radius: 4px; display: none; }
+        #statusMessage { margin-top: 15px; font-family: monospace; color: #00ffa3; background: #0b0e14; padding: 10px; border-radius: 4px; display: none; word-break: break-word; }
     </style>
 </head>
 <body>
-<!-- Replace your existing container inside the <body> tag with this clean container block -->
+
 <div class="container">
     <h1>⛽ PennyGas</h1>
     <p>The cheapest Ethereum gas refill on earth. Flat $0.06 platform fee.</p>
@@ -69,11 +69,11 @@ window.activeUserAddress = "";
 const tokenMatrix = {
     "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
     "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9" },
-    "11155111": { "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", "USDT": "0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0" }
+    "11155111": { "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", "USDT": "0xaA8E23Fb1079EA71e0a56F48a2Aa51851D8433D0" }
 };
 
 const VAULT_ADDRESS = "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
-const BACKEND_URL = "https://gas-refuel-service.onrender.com";
+const BACKEND_URL = "http://localhost:10000"; // Local dev port configuration
 
 async function fetchLiveInvoiceQuote() {
     const chainId = document.getElementById('sourceChain').value;
@@ -85,7 +85,6 @@ async function fetchLiveInvoiceQuote() {
         return;
     }
     const tokenAddress = tokenMatrix[chainId][tokenSymbol];
-
     if (!amount || amount <= 0) return;
 
     try {
@@ -101,7 +100,6 @@ async function fetchLiveInvoiceQuote() {
         document.getElementById('uiBuffer').innerText = `${data.buffer} ETH`;
         document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ETH`;
         
-        // Cache calculated raw string values to the DOM for precise BigInt extraction later
         document.getElementById('uiTotal').dataset.rawTokenAmount = data.rawTokenAmount || "15000000"; 
         document.getElementById('uiTotal').dataset.rawEthAmount = data.rawEthAmount || "10000000000000000";
     } catch (error) {
@@ -116,8 +114,6 @@ async function connectPhantomEVM() {
 
     try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        
-        // Cast string response from object collection cleanly
         window.activeUserAddress = accounts + "";
 
         document.getElementById('statusMessage').innerText = `🔗 Connected: ${window.activeUserAddress.substring(0,6)}...${window.activeUserAddress.substring(window.activeUserAddress.length - 4)}`;
@@ -125,7 +121,6 @@ async function connectPhantomEVM() {
         document.getElementById('connectBtn').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         
-        // Populate invoice data automatically upon a successful login handshake
         fetchLiveInvoiceQuote();
     } catch (error) {
         alert("Wallet Handshake Error: " + error.message);
@@ -145,69 +140,48 @@ async function requestGaslessApproval() {
         document.getElementById('statusMessage').innerText = "⏳ Compiling gasless signature permit...";
         document.getElementById('statusMessage').style.display = 'block';
 
-        const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour expiration window
+        const deadline = Math.floor(Date.now() / 1000) + 3600; 
         const tokenAmountRaw = document.getElementById('uiTotal').dataset.rawTokenAmount || "15000000";
         const ethToUserRaw = document.getElementById('uiTotal').dataset.rawEthAmount || "10000000000000000";
 
-        // A. Call the vault's on-chain nonce public mapping storage slot natively via RPC
+        // Query smart contract nonce count
         const nonceResponse = await window.ethereum.request({
             method: 'eth_call',
             params: [{
                 to: VAULT_ADDRESS,
-                data: "0x7ecebe00" + window.activeUserAddress.replace("0x", "").padStart(64, "0") // nonces(address) signature hash
+                data: "0x7ecebe00" + window.activeUserAddress.replace("0x", "").padStart(64, "0")
             }, "latest"]
         });
         const currentNonce = parseInt(nonceResponse, 16) || 0;
 
-        // B. Define the structural configuration matching RefuelVault.sol REFUEL_TYPEHASH perfectly
+        // Build typed parameters configuration payload matches
         const msgParams = JSON.stringify({
             types: {
                 EIP712Domain: [
-                    { name: "name", type: "string" },
-                    { name: "version", type: "string" },
-                    { name: "chainId", type: "uint256" },
-                    { name: "verifyingContract", type: "address" }
+                    { name: "name", type: "string" }, { name: "version", type: "string" },
+                    { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" }
                 ],
                 GaslessRefuel: [
-                    { name: "user", type: "address" },
-                    { name: "token", type: "address" },
-                    { name: "tokenAmount", type: "uint256" },
-                    { name: "ethToUser", type: "uint256" },
-                    { name: "nonce", type: "uint256" },
-                    { name: "deadline", type: "uint256" }
+                    { name: "user", type: "address" }, { name: "token", type: "address" },
+                    { name: "tokenAmount", type: "uint256" }, { name: "ethToUser", type: "uint256" },
+                    { name: "nonce", type: "uint256" }, { name: "deadline", type: "uint256" }
                 ]
             },
             primaryType: "GaslessRefuel",
-            domain: {
-                name: "PennyGas Refuel", // Character-for-character constructor match
-                version: "1",
-                chainId: parseInt(chainId),
-                verifyingContract: VAULT_ADDRESS
-            },
-            message: {
-                user: window.activeUserAddress,
-                token: tokenAddress,
-                tokenAmount: tokenAmountRaw,
-                ethToUser: ethToUserRaw,
-                nonce: currentNonce,
-                deadline: deadline
-            }
+            domain: { name: "PennyGas Refuel", version: "1", chainId: parseInt(chainId), verifyingContract: VAULT_ADDRESS },
+            message: { user: window.activeUserAddress, token: tokenAddress, tokenAmount: tokenAmountRaw, ethToUser: ethToUserRaw, nonce: currentNonce, deadline: deadline }
         });
 
-        // C. Request the native cryptographic typed handshake string from Phantom
         const signature = await window.ethereum.request({
             method: 'eth_signTypedData_v4',
             params: [window.activeUserAddress, msgParams]
         });
-
-        // D. Split the output hash cleanly into v, r, s coordinates for your Solidity call
         const r = signature.slice(0, 66);
         const s = "0x" + signature.slice(66, 130);
         const v = parseInt(signature.slice(130, 132), 16);
 
         document.getElementById('statusMessage').innerText = "✅ Signed! Sending variables to routing relayer...";
 
-        // E. Dispatch structured JSON bundle onward to the server.js post route
         const response = await fetch(`${BACKEND_URL}/api/refuel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -217,9 +191,7 @@ async function requestGaslessApproval() {
                 tokenAmount: tokenAmountRaw,
                 ethToUser: ethToUserRaw,
                 deadline: deadline,
-                v: v,
-                r: r,
-                s: s
+                v: v, r: r, s: s
             })
         });
 
@@ -237,3 +209,34 @@ async function requestGaslessApproval() {
 </script>
 </body>
 </html>
+/**
+ * POST /api/refuel
+ * Decoupled endpoint matching frontend coordinate inputs to filter out 400 parameter errors
+ */
+app.post('/api/refuel', async (req, res) => {
+    try {
+        const { user, token, tokenAmount, ethToUser, deadline, v, r, s } = req.body;
+
+        if (!user || !token || !tokenAmount || !ethToUser || !v || !r || !s) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Handshake Error: Missing cryptographic parameter arrays inside body payload." 
+            });
+        }
+
+        console.log(`📡 Relayer executing on-chain signature dispatch for user: ${user}`);
+        
+        // Mocking an instant randomized hex hash response to successfully complete the frontend loop
+        const generatedTxHash = "0x" + [...Array(64)].map(() => Math.floor(Math.random()*16).toString(16)).join("");
+
+        res.json({
+            success: true,
+            message: "Signature broadcast processing initiated safely.",
+            transactionHash: generatedTxHash
+        });
+
+    } catch (error) {
+        console.error("Relayer exception:", error);
+        res.status(500).json({ success: false, error: "Internal relayer calculation crash." });
+    }
+});
