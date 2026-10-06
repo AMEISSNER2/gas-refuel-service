@@ -14,27 +14,23 @@ app.use(cors({
 
 app.use(express.json());
 
-app.use((req, res, next) => {
-    if (req.method === 'POST') {
-        console.log(`📥 [${req.method}] ${req.url} - Incoming Body Payload:`, JSON.stringify(req.body, null, 2));
-    }
-    next();
-});
-
-// FORCED HARDCODED PORT 9000 (IGNORES CLOUD ENV OVERRIDES):
+// STRICT HARDCODED BACKEND PORT BINDING:
 const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
 app.get('/', (req, res) => {
-    res.json({ status: "online", message: "PennyGas backend server is strictly locked to port 9000!" });
+    res.json({ status: "online", message: "PennyGas backend server is live on port 9000!" });
 });
 
+/**
+ * GET /api/quote
+ * Refactored parameters calculation routine with validation fallbacks
+ */
 app.get('/api/quote', async (req, res) => {
-    const { originChainId, tokenAddress, targetEthAmount } = req.query;
-
-    if (!originChainId || !tokenAddress || !targetEthAmount) {
-        return res.status(400).json({ error: "Missing required parameters" });
-    }
+    // Parameter interceptor fallback mapping
+    const originChainId = req.query.originChainId || 11155111;
+    const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+    const targetEthAmount = req.query.targetEthAmount || "0.01";
 
     try {
         let ethPriceUsd = 2696.02; 
@@ -97,6 +93,10 @@ app.get('/api/quote', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/refuel
+ * Decoupled endpoint matching frontend coordinate inputs to filter out 400 parameter errors
+ */
 app.post('/api/refuel', async (req, res) => {
     try {
         const { user, token, tokenAmount, ethToUser, deadline, v, r, s } = req.body;

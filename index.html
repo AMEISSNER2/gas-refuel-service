@@ -72,8 +72,6 @@ const tokenMatrix = {
 };
 
 const VAULT_ADDRESS = "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
-
-// HARDCODED PORT 9000 ONLY:
 const BACKEND_URL = "http://127.0.0.1:9000"; 
 
 async function fetchLiveInvoiceQuote() {
@@ -181,6 +179,7 @@ async function requestGaslessApproval() {
         const s = "0x" + signature.slice(66, 130);
         const v = parseInt(signature.slice(130, 132), 16);
 
+        document.getElementById('statusMessage').style.color = "#00ffa3";
         document.getElementById('statusMessage').innerText = "✅ Signed! Sending variables to routing relayer...";
 
         const response = await fetch(`${BACKEND_URL}/api/refuel`, {
@@ -204,6 +203,7 @@ async function requestGaslessApproval() {
         }
 
     } catch (error) {
+        document.getElementById('statusMessage').style.color = "#ff4a4a";
         document.getElementById('statusMessage').innerText = "❌ Handshake Error: " + error.message;
     }
 }
