@@ -1,7 +1,3 @@
-// ONLY load dotenv if running locally. In Render, native environment injection handles this.
-if (process.env.NODE_ENV !== "production") {
-    require("dotenv").config();
-}
 const express = require("express");
 const cors = require("cors");
 const { ethers } = require("ethers");
@@ -9,14 +5,22 @@ const { ethers } = require("ethers");
 const app = express();
 // Secure application deployment port assignment for hosting environments like Render
 const PORT = process.env.PORT || 3000;
-// =========================================================================
-// MIDDLEWARE CONFIGURATIONS
-// =========================================================================
+
+// Immediately open port binding so Render exposes the environment variables to the process
+app.listen(PORT, () => {
+    console.log(`====================================================================`);
+    console.log(` PennyGas Full-Stack Gasless Refuel Web App Server Active`);
+    console.log(` Running on Port Address: ${PORT}`);
+    console.log(` Active Contract Vault Network Target: Ethereum Sepolia`);
+    console.log(`====================================================================`);
+});
+// ONLY load dotenv if running locally. In Render, native environment injection handles this.
+if (process.env.NODE_ENV !== "production") {
+    require("dotenv").config();
+}
+
 app.use(cors());
 app.use(express.json());
-// =========================================================================
-// SMART CONTRACT & ETHERS BLOCKCHAIN INTERACTION CONFIGURATIONS
-// =========================================================================
 // Safety check to ensure critical node credentials are loaded properly
 if (!process.env.ALCHEMY_SEPOLIA_RPC_URL || !process.env.RELAYER_PRIVATE_KEY) {
     console.error("CRITICAL ERROR: Missing necessary node connection credentials inside environment configurations.");
@@ -37,10 +41,8 @@ const VAULT_ABI = [
 
 // Initialize the active contract engine connection instance
 const refuelVaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, relayerWallet);
-// =========================================================================
-// API ENDPOINTS & ROUTING LOGIC
-// =========================================================================
-
+console.log(` Contract Vault Instance Routing Target: ${VAULT_ADDRESS}`);
+console.log(`====================================================================`);
 /**
  * @route   GET /api/health
  * @desc    Simple monitoring ping check to verify application runtime health on Render.
@@ -48,6 +50,7 @@ const refuelVaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, relaye
 app.get("/api/health", (req, res) => {
     return res.status(200).json({ status: "healthy", network: "Sepolia Testnet", vault: VAULT_ADDRESS });
 });
+
 /**
  * @route   GET /api/quote
  * @desc    Legacy system calculation tracking loop (Hooked up to your instant Across APIs metrics).
@@ -58,13 +61,12 @@ app.get("/api/quote", async (req, res) => {
         
         console.log(`Calculating quote parameter outputs for target: ${targetEthAmount} ETH`);
 
-        // Return instant response data structures matching frontend UI formatting
         return res.status(200).json({
             success: true,
             bridgeFee: "0.0005",
             buffer: "0.0002",
             totalInvoiceEth: (parseFloat(targetEthAmount) + 0.0007).toString(),
-            rawTokenAmount: "15000000", // Example: \$15.00 USDC (6 decimals)
+            rawTokenAmount: "15000000", 
             rawEthAmount: ethers.parseUnits(targetEthAmount, 18).toString()
         });
     } catch (error) {
@@ -80,7 +82,6 @@ app.post("/api/submit-permit", async (req, res) => {
     try {
         const { user, token, tokenAmount, ethToUser, deadline, v, r, s } = req.body;
 
-        // Validation checkpoint check to shield backend execution loops from malformed data objects
         if (!user || !token || !tokenAmount || !ethToUser || !deadline || v === undefined || !r || !s) {
             return res.status(400).json({ 
                 success: false, 
@@ -90,28 +91,22 @@ app.post("/api/submit-permit", async (req, res) => {
 
         console.log(`\n[Vault Processing Request Loop Initiated]`);
         console.log(`Routing gasless execution path securely through Contract Vault at: ${VAULT_ADDRESS}`);
-        console.log(`User Target Wallet: ${user}`);
 
-        // Broadcast directly to the on-chain RefuelVault smart contract engine matching structural arguments
         const tx = await refuelVaultContract.executeGaslessRefuel(
             user,
             token,
-            ethers.toBeHex(tokenAmount), // Ensuring absolute numeric type formatting parameters
-            ethers.toBeHex(ethToUser),   // Ensuring absolute numeric type formatting parameters
+            ethers.toBeHex(tokenAmount), 
+            ethers.toBeHex(ethToUser),   
             deadline,
             v,
             r,
             s
         );
 
-        console.log(`Transaction broadcast sequence successful. Awaiting block miners... Transaction Hash: ${tx.hash}`);
-        
-        // Wait for 1 confirmation to update frontend states reliably
+        console.log(`Transaction broadcast sequence successful. Hash: ${tx.hash}`);
         const receipt = await tx.wait();
-        
-        console.log(`Block execution validated. Gasless refuel transaction pipeline successfully closed.\n`);
+        console.log(`Block execution validated. Pipeline closed.\n`);
 
-        // Send payload back cleanly to the template literal frontend UI hook
         return res.status(200).json({
             success: true,
             message: "Refuel contract transaction successfully executed!",
@@ -120,22 +115,10 @@ app.post("/api/submit-permit", async (req, res) => {
 
     } catch (error) {
         console.error("CRITICAL ERROR: Failed to execute transaction path via contract vault engine:", error);
-        
         return res.status(500).json({ 
             success: false, 
             error: "On-chain transaction execution failed", 
             details: error.reason || error.message 
         });
     }
-});
-// =========================================================================
-// SERVER START EXECUTION
-// =========================================================================
-app.listen(PORT, () => {
-    console.log(`====================================================================`);
-    console.log(` PennyGas Full-Stack Gasless Refuel Web App Server Active`);
-    console.log(` Running on Port Address: ${PORT}`);
-    console.log(` Active Contract Vault Network Target: Ethereum Sepolia`);
-    console.log(` Contract Vault Instance Routing Target: ${VAULT_ADDRESS}`);
-    console.log(`====================================================================`);
 });
