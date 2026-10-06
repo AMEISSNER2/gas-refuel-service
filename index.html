@@ -21,19 +21,20 @@
     </style>
 </head>
 <body>
+<!-- Replace your existing container inside the <body> tag with this clean container block -->
 <div class="container">
     <h1>⛽ PennyGas</h1>
-    <p>The cheapest Ethereum gas refill on earth. Flat \$0.06 platform fee.</p>
+    <p>The cheapest Ethereum gas refill on earth. Flat $0.06 platform fee.</p>
     
     <button id="connectBtn" class="btn" onclick="connectPhantomEVM()">Connect Phantom Wallet</button>
 
     <div id="dashboard" style="display: none; margin-top: 20px;">
         <div class="form-group">
-                <label for="sourceChain">Gas Needed for:</label>
-                <select id="sourceChain" onchange="fetchLiveInvoiceQuote()">
+            <label for="sourceChain">Gas Needed for:</label>
+            <select id="sourceChain" onchange="fetchLiveInvoiceQuote()">
                 <option value="1">Ethereum Mainnet</option>
-                <option value="42161" selected>Arbitrum One</option>
- 		<option value="11155111" selected>Ethereum Sepolia Testnet</option>
+                <option value="42161">Arbitrum One</option>
+                <option value="11155111" selected>Ethereum Sepolia Testnet</option>
             </select>
         </div>
 
@@ -53,7 +54,7 @@
         <div class="invoice-box">
             <div class="invoice-row"><span>Across Bridge Fee:</span> <span id="uiBridgeFee">Calculating...</span></div>
             <div class="invoice-row"><span>Gas Spike Buffer (2%):</span> <span id="uiBuffer">Calculating...</span></div>
-            <div class="invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">\$0.06</span></div>
+            <div class="invoice-row"><span>PennyGas Fee:</span> <span id="uiProfit">$0.06</span></div>
             <div class="invoice-total"><span>Total Invoice Amount:</span> <span id="uiTotal">Calculating...</span></div>
         </div>
 
@@ -62,147 +63,177 @@
 
     <div id="statusMessage"></div>
 </div>
-<script>
-    // SELF-CONTAINED STATE: Handles active wallet connection values natively
-    window.activeUserAddress = "";
+// Start of <script> block setup variables
+window.activeUserAddress = "";
 
-    // Mapped token configurations updated to look at native Ethereum Sepolia Testnet contract tokens
-    const tokenMatrix = {
-        "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
-        "11155111": { "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", "USDT": "0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0" }
-    };
+const tokenMatrix = {
+    "1": { "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
+    "42161": { "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "USDT": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9" },
+    "11155111": { "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", "USDT": "0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0" }
+};
 
-    const prefix = "https://";
-    const appName = "gas-refuel-service";
-    const domainSuffix = ".onrender.com";
-    const BACKEND_URL = prefix + appName + domainSuffix;
+const VAULT_ADDRESS = "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
+const BACKEND_URL = "https://onrender.com";
 
-    async function fetchLiveInvoiceQuote() {
-        const chainId = document.getElementById('sourceChain').value;
-        const tokenSymbol = document.getElementById('sourceToken').value;
-        const amount = document.getElementById('ethAmount').value;
+async function fetchLiveInvoiceQuote() {
+    const chainId = document.getElementById('sourceChain').value;
+    const tokenSymbol = document.getElementById('sourceToken').value;
+    const amount = document.getElementById('ethAmount').value;
+    
+    if (!tokenMatrix[chainId] || !tokenMatrix[chainId][tokenSymbol]) {
+        document.getElementById('uiTotal').innerText = "Select valid network";
+        return;
+    }
+    const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+
+    if (!amount || amount <= 0) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/quote?originChainId=${chainId}&tokenAddress=${tokenAddress}&targetEthAmount=${amount}`);
+        const data = await response.json();
+
+        if (!data || data.error) {
+           document.getElementById('uiTotal').innerText = "Route or amount invalid";
+           return;
+        }
+
+        document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ETH`;
+        document.getElementById('uiBuffer').innerText = `${data.buffer} ETH`;
+        document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ETH`;
         
-        // Safety lock safeguards parameters parsing loops if the network configuration mismatch exists
-        if (!tokenMatrix[chainId] || !tokenMatrix[chainId][tokenSymbol]) {
-            document.getElementById('uiTotal').innerText = "Select valid testnet network";
-            return;
-        }
-        const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+        // Cache calculated raw string values to the DOM for precise BigInt extraction later
+        document.getElementById('uiTotal').dataset.rawTokenAmount = data.rawTokenAmount || "15000000"; 
+        document.getElementById('uiTotal').dataset.rawEthAmount = data.rawEthAmount || "10000000000000000";
+    } catch (error) {
+        document.getElementById('uiTotal').innerText = "Server link offline";
+    }
+}
+async function connectPhantomEVM() {
+    if (typeof window.ethereum === 'undefined') {
+        alert("Phantom extension not detected!");
+        return;
+    }
 
-        if (!amount || amount <= 0) return;
+    try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        
+        // Cast string response from object collection cleanly
+        window.activeUserAddress = accounts + "";
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/quote?originChainId=${chainId}&tokenAddress=${tokenAddress}&targetEthAmount=${amount}`);
-            const data = await response.json();
+        document.getElementById('statusMessage').innerText = `🔗 Connected: ${window.activeUserAddress.substring(0,6)}...${window.activeUserAddress.substring(window.activeUserAddress.length - 4)}`;
+        document.getElementById('statusMessage').style.display = 'block';
+        document.getElementById('connectBtn').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        
+        // Populate invoice data automatically upon a successful login handshake
+        fetchLiveInvoiceQuote();
+    } catch (error) {
+        alert("Wallet Handshake Error: " + error.message);
+    }
+}
+async function requestGaslessApproval() {
+    if (!window.activeUserAddress) {
+        alert("Connect your wallet first!");
+        return;
+    }
 
-            if (!data || data.error) {
-               document.getElementById('uiTotal').innerText = "Route or amount invalid";
-               return;
+    const chainId = document.getElementById('sourceChain').value;
+    const tokenSymbol = document.getElementById('sourceToken').value;
+    const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+
+    try {
+        document.getElementById('statusMessage').innerText = "⏳ Compiling gasless signature permit...";
+        document.getElementById('statusMessage').style.display = 'block';
+
+        const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour expiration window
+        const tokenAmountRaw = document.getElementById('uiTotal').dataset.rawTokenAmount || "15000000";
+        const ethToUserRaw = document.getElementById('uiTotal').dataset.rawEthAmount || "10000000000000000";
+
+        // A. Call the vault's on-chain nonce public mapping storage slot natively via RPC
+        const nonceResponse = await window.ethereum.request({
+            method: 'eth_call',
+            params: [{
+                to: VAULT_ADDRESS,
+                data: "0x7ecebe00" + window.activeUserAddress.replace("0x", "").padStart(64, "0") // nonces(address) signature hash
+            }, "latest"]
+        });
+        const currentNonce = parseInt(nonceResponse, 16) || 0;
+
+        // B. Define the structural configuration matching RefuelVault.sol REFUEL_TYPEHASH perfectly
+        const msgParams = JSON.stringify({
+            types: {
+                EIP712Domain: [
+                    { name: "name", type: "string" },
+                    { name: "version", type: "string" },
+                    { name: "chainId", type: "uint256" },
+                    { name: "verifyingContract", type: "address" }
+                ],
+                GaslessRefuel: [
+                    { name: "user", type: "address" },
+                    { name: "token", type: "address" },
+                    { name: "tokenAmount", type: "uint256" },
+                    { name: "ethToUser", type: "uint256" },
+                    { name: "nonce", type: "uint256" },
+                    { name: "deadline", type: "uint256" }
+                ]
+            },
+            primaryType: "GaslessRefuel",
+            domain: {
+                name: "PennyGas Refuel", // Character-for-character constructor match
+                version: "1",
+                chainId: parseInt(chainId),
+                verifyingContract: VAULT_ADDRESS
+            },
+            message: {
+                user: window.activeUserAddress,
+                token: tokenAddress,
+                tokenAmount: tokenAmountRaw,
+                ethToUser: ethToUserRaw,
+                nonce: currentNonce,
+                deadline: deadline
             }
+        });
 
-            document.getElementById('uiBridgeFee').innerText = `${data.bridgeFee} ETH`;
-            document.getElementById('uiBuffer').innerText = `${data.buffer} ETH`;
-            document.getElementById('uiTotal').innerText = `${data.totalInvoiceEth} ETH`;
-        } catch (error) {
-            document.getElementById('uiTotal').innerText = "Server link offline";
+        // C. Request the native cryptographic typed handshake string from Phantom
+        const signature = await window.ethereum.request({
+            method: 'eth_signTypedData_v4',
+            params: [window.activeUserAddress, msgParams]
+        });
+
+        // D. Split the output hash cleanly into v, r, s coordinates for your Solidity call
+        const r = signature.slice(0, 66);
+        const s = "0x" + signature.slice(66, 130);
+        const v = parseInt(signature.slice(130, 132), 16);
+
+        document.getElementById('statusMessage').innerText = "✅ Signed! Sending variables to routing relayer...";
+
+        // E. Dispatch structured JSON bundle onward to the server.js post route
+        const response = await fetch(`${BACKEND_URL}/api/refuel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user: window.activeUserAddress,
+                token: tokenAddress,
+                tokenAmount: tokenAmountRaw,
+                ethToUser: ethToUserRaw,
+                deadline: deadline,
+                v: v,
+                r: r,
+                s: s
+            })
+        });
+
+        const relayData = await response.json();
+        if (relayData.success) {
+            document.getElementById('statusMessage').innerHTML = `🚀 Refuel Complete! <a href="https://etherscan.io{relayData.transactionHash}" target="_blank">View on Etherscan</a>`;
+        } else {
+            document.getElementById('statusMessage').innerText = "❌ Vault Error: " + relayData.error;
         }
+
+    } catch (error) {
+        document.getElementById('statusMessage').innerText = "❌ Handshake Error: " + error.message;
     }
-
-    async function connectPhantomEVM() {
-        if (typeof window.ethereum === 'undefined') {
-            alert("Phantom extension not detected in your browser!");
-            return;
-        }
-
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            
-            // Standard plain text array string parsing
-            const stringAddr = accounts + "";
-            window.activeUserAddress = stringAddr;
-
-            document.getElementById('statusMessage').innerText = `🔗 Connected: ${window.activeUserAddress.substring(0,6)}...${window.activeUserAddress.substring(window.activeUserAddress.length - 4)}`;
-            document.getElementById('statusMessage').style.display = 'block';
-            document.getElementById('connectBtn').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            
-            // Auto fetch current market conditions
-            fetchLiveInvoiceQuote();
-        } catch (error) {
-            alert("Wallet Handshake Error: " + error.message);
-        }
-    }
-
-    async function requestGaslessApproval() {
-        if (!window.activeUserAddress) {
-            alert("Connect your wallet first!");
-            return;
-        }
-
-        const chainId = document.getElementById('sourceChain').value;
-        const tokenSymbol = document.getElementById('sourceToken').value;
-        const amount = document.getElementById('ethAmount').value;
-        const tokenAddress = tokenMatrix[chainId] ? tokenMatrix[chainId][tokenSymbol] : null;
-
-        try {
-            document.getElementById('statusMessage').innerText = "⏳ Compiling gasless signature permit...";
-            document.getElementById('statusMessage').style.display = 'block';
-
-            const pennyGasVaultSpender = "0x0000000000000000000000000000000000000000"; 
-            const deadline = Math.floor(Date.now() / 1000) + 3600; 
-            
-            const tokenDecimalsMultiplier = 1000000; 
-            const valueToAuthorizeRaw = (15.00 * tokenDecimalsMultiplier).toString();
-
-            const hexMessageHexPayload = "0x" + btoa(`PennyGasPermit:${window.activeUserAddress}:${pennyGasVaultSpender}:${valueToAuthorizeRaw}:${deadline}:${chainId}`);
-
-            const signature = await window.ethereum.request({
-                method: 'personal_sign',
-                params: [hexMessageHexPayload, window.activeUserAddress]
-            });
-
-            document.getElementById('statusMessage').innerText = "🚀 Signature captured! Transmitting to Render...";
-
-            const relayResponse = await fetch(`${BACKEND_URL}/api/submit-permit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    owner: window.activeUserAddress,
-                    spender: pennyGasVaultSpender,
-                    value: valueToAuthorizeRaw,
-                    deadline: deadline,
-                    signature: signature
-                })
-            });
-
-            const relayData = await relayResponse.json();
-
-            if (relayData.success) {
-                // FIXED: Includes the missing '\$' syntax and proper sub-path directories to build a real Etherscan URL
-                const etherscanLink = `https://etherscan.io${relayData.transactionHash}`;
-                
-                alert(`🎉 Success! Onchain Refuel Complete!\n\nMessage: ${relayData.message}`);
-                
-                // Inject the live link into your frontend dashboard status element layout view box
-                document.getElementById('statusMessage').innerHTML = `
-                    <div style="background: #10b981; color: white; padding: 16px; border-radius: 8px; margin-top: 15px; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                        🚀 Refuel Processed Successfully! <br/>
-                        <a href="${etherscanLink}" target="_blank" style="color: #fff; text-decoration: underline; font-size: 14px; display: inline-block; margin-top: 8px; font-family: monospace;">
-                            View Live Receipt on Etherscan ↗
-                        </a>
-                    </div>
-                `;
-            } else {
-                alert(`❌ Server processing error: ${relayData.error}`);
-                document.getElementById('statusMessage').innerText = "❌ Processing dropped.";
-            }
-
-        } catch (error) {
-            console.error(error);
-            document.getElementById('statusMessage').innerText = "❌ Signing failed.";
-            alert("Authorization dropped: " + error.message);
-        }
-    }
+}
 </script>
 </body>
 </html>
