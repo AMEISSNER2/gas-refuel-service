@@ -1,4 +1,7 @@
-require("dotenv").config();
+// ONLY load dotenv if running locally. In Render, native environment injection handles this.
+if (process.env.NODE_ENV !== "production") {
+    require("dotenv").config();
+}
 const express = require("express");
 const cors = require("cors");
 const { ethers } = require("ethers");
