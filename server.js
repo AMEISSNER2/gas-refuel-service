@@ -6,13 +6,11 @@ const { ethers } = require("ethers");
 const app = express();
 // Secure application deployment port assignment for hosting environments like Render
 const PORT = process.env.PORT || 3000;
-
 // =========================================================================
 // MIDDLEWARE CONFIGURATIONS
 // =========================================================================
 app.use(cors());
 app.use(express.json());
-
 // =========================================================================
 // SMART CONTRACT & ETHERS BLOCKCHAIN INTERACTION CONFIGURATIONS
 // =========================================================================
@@ -29,14 +27,13 @@ const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provide
 // Track your newly deployed contract address fallback identity securely
 const VAULT_ADDRESS = process.env.REFUEL_VAULT_ADDRESS || "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
 
-// Minimum Application Binary Interface (ABI) required to route transaction execution pipelines
+// Minimum Application Binary Interface (ABI) matched directly to updated RefuelVault.sol
 const VAULT_ABI = [
-    "function executeGaslessRefuel(address user, address token, uint256 amount, uint256 fee, uint256 deadline, bytes calldata sig) external"
+    "function executeGaslessRefuel(address user, address token, uint256 tokenAmount, uint256 ethToUser, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external"
 ];
 
 // Initialize the active contract engine connection instance
 const refuelVaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, relayerWallet);
-
 // =========================================================================
 // API ENDPOINTS & ROUTING LOGIC
 // =========================================================================
@@ -48,48 +45,43 @@ const refuelVaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, relaye
 app.get("/api/health", (req, res) => {
     return res.status(200).json({ status: "healthy", network: "Sepolia Testnet", vault: VAULT_ADDRESS });
 });
-
 /**
- * @route   POST /api/quote
+ * @route   GET /api/quote
  * @desc    Legacy system calculation tracking loop (Hooked up to your instant Across APIs metrics).
  */
-app.post("/api/quote", async (req, res) => {
+app.get("/api/quote", async (req, res) => {
     try {
-        const { user, token, amount } = req.body;
+        const { originChainId, tokenAddress, targetEthAmount } = req.query;
         
-        // Simulating flat service fee pricing metric conversions
-        const flatFeeUsd = parseFloat(process.env.SERVICE_FLAT_FEE_USD || "0.06");
-        
-        console.log(`Calculating quote parameter outputs for user: ${user}`);
+        console.log(`Calculating quote parameter outputs for target: ${targetEthAmount} ETH`);
 
         // Return instant response data structures matching frontend UI formatting
         return res.status(200).json({
             success: true,
-            user,
-            token,
-            amount,
-            estimatedFee: ethers.parseUnits("0.001", 18).toString(), // Mock fee conversion calculation
-            deadline: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiration window limit rule
+            bridgeFee: "0.0005",
+            buffer: "0.0002",
+            totalInvoiceEth: (parseFloat(targetEthAmount) + 0.0007).toString(),
+            rawTokenAmount: "15000000", // Example: \$15.00 USDC (6 decimals)
+            rawEthAmount: ethers.parseUnits(targetEthAmount, 18).toString()
         });
     } catch (error) {
         console.error("Quote engine parsing exception error:", error);
         return res.status(500).json({ success: false, error: "Internal fee generation loop broken" });
     }
 });
-
 /**
  * @route   POST /api/submit-permit
  * @desc    Accepts signature payloads from front-end and executes the on-chain vault refuel contract transaction.
  */
 app.post("/api/submit-permit", async (req, res) => {
     try {
-        const { user, token, amount, fee, deadline, signature } = req.body;
+        const { user, token, tokenAmount, ethToUser, deadline, v, r, s } = req.body;
 
         // Validation checkpoint check to shield backend execution loops from malformed data objects
-        if (!user || !token || !amount || !fee || !deadline || !signature) {
+        if (!user || !token || !tokenAmount || !ethToUser || !deadline || v === undefined || !r || !s) {
             return res.status(400).json({ 
                 success: false, 
-                error: "Malformed request body parameters. All signature objects are mandatory fields." 
+                error: "Malformed request body parameters. All signature objects and split coordinates are mandatory fields." 
             });
         }
 
@@ -97,14 +89,16 @@ app.post("/api/submit-permit", async (req, res) => {
         console.log(`Routing gasless execution path securely through Contract Vault at: ${VAULT_ADDRESS}`);
         console.log(`User Target Wallet: ${user}`);
 
-        // Broadcast directly to the on-chain RefuelVault smart contract engine
+        // Broadcast directly to the on-chain RefuelVault smart contract engine matching structural arguments
         const tx = await refuelVaultContract.executeGaslessRefuel(
             user,
             token,
-            ethers.toBeHex(amount),    // Ensuring absolute numeric type formatting parameters
-            ethers.toBeHex(fee),       // Ensuring absolute numeric type formatting parameters
+            ethers.toBeHex(tokenAmount), // Ensuring absolute numeric type formatting parameters
+            ethers.toBeHex(ethToUser),   // Ensuring absolute numeric type formatting parameters
             deadline,
-            signature
+            v,
+            r,
+            s
         );
 
         console.log(`Transaction broadcast sequence successful. Awaiting block miners... Transaction Hash: ${tx.hash}`);
@@ -124,7 +118,6 @@ app.post("/api/submit-permit", async (req, res) => {
     } catch (error) {
         console.error("CRITICAL ERROR: Failed to execute transaction path via contract vault engine:", error);
         
-        // Handle specific EVM execution failure message logs directly
         return res.status(500).json({ 
             success: false, 
             error: "On-chain transaction execution failed", 
@@ -132,7 +125,6 @@ app.post("/api/submit-permit", async (req, res) => {
         });
     }
 });
-
 // =========================================================================
 // SERVER START EXECUTION
 // =========================================================================
