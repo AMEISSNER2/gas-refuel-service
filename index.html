@@ -145,14 +145,33 @@ async function requestGaslessApproval() {
         const tokenAmountRaw = document.getElementById('uiTotal').dataset.rawTokenAmount || "15000000";
         const ethToUserRaw = document.getElementById('uiTotal').dataset.rawEthAmount || "10000000000000000";
 
-        const nonceResponse = await window.ethereum.request({
-            method: 'eth_call',
-            params: [{
-                to: VAULT_ADDRESS,
-                data: "0x7ecebe00" + window.activeUserAddress.replace("0x", "").padStart(64, "0")
-            }, "latest"]
-        });
-        const currentNonce = parseInt(nonceResponse, 16) || 0;
+        const cleanUserAddress = String(window.activeUserAddress).toLowerCase().replace("0x", "");
+        let currentNonce = 0;
+
+        try {
+            const nonceResponse = await window.ethereum.request({
+                method: 'eth_call',
+                params: [{
+                    to: VAULT_ADDRESS,
+                    data: "0x7ecebe00" + cleanUserAddress.padStart(64, "0")
+                }, "latest"]
+            });
+            if (nonceResponse && nonceResponse !== "0x") {
+                currentNonce = parseInt(nonceResponse, 16);
+            }
+        } catch (nonceError) {
+            console.warn("Vault contract nonce query failed. Applying transaction fallback count:", nonceError);
+            try {
+                // FIXED PARAMS BLOCK ARRAY: Formatted explicitly to satisfy evmMask parameters mapping rules
+                const providerNonce = await window.ethereum.request({
+                    method: 'eth_getTransactionCount',
+                    params: [window.activeUserAddress, 'latest']
+                });
+                currentNonce = parseInt(providerNonce, 16);
+            } catch (e) {
+                currentNonce = 0; 
+            }
+        }
         const msgParams = JSON.stringify({
             types: {
                 EIP712Domain: [
