@@ -14,7 +14,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// FIXED FOR PORT 9000 BINDING EXCLUSIVELY
+// ENFORCE PORT 9000 BINDING EXCLUSIVELY
 const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
@@ -24,12 +24,23 @@ app.get('/', (req, res) => {
 
 /**
  * GET /api/quote
- * Explicitly prefixed path mapping to clear browser console 404 errors
+ * FIXED BY CAPTURING THE FRONTEND SPELLING TYPO VIA req.query.orieinChainId
  */
 app.get('/api/quote', async (req, res) => {
-    const originChainId = req.query.originChainId || 11155111;
-    const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-    const targetEthAmount = req.query.targetEthAmount || "0.01";
+    // Intercept both the correct spelling and the frontend's typo "orieinChainId"
+    const originChainId = req.query.originChainId || req.query.orieinChainId;
+    const tokenAddress = req.query.tokenAddress;
+    const targetEthAmount = req.query.targetEthAmount;
+
+    // Verbose verification fallback to log missing keys to terminal instead of silently failing
+    if (!originChainId || !tokenAddress || !targetEthAmount) {
+        console.log("⚠️ Missing Parameters Debugger Stack:");
+        console.log(`   > Received ChainID: ${originChainId || "MISSING"}`);
+        console.log(`   > Received Token Address: ${tokenAddress || "MISSING"}`);
+        console.log(`   > Received ETH Amount: ${targetEthAmount || "MISSING"}`);
+        
+        return res.status(400).json({ error: "Missing required parameters" });
+    }
 
     try {
         let ethPriceUsd = 2696.02; 
@@ -94,7 +105,7 @@ app.get('/api/quote', async (req, res) => {
 
 /**
  * POST /api/refuel
- * Prefixed route mapping listening for cryptographic coordinates signature payloads
+ * Processes transaction signature coordinates payloads from frontend
  */
 app.post('/api/refuel', async (req, res) => {
     try {
