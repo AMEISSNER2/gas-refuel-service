@@ -22,13 +22,13 @@ if (process.env.NODE_ENV !== "production") {
 app.use(cors());
 app.use(express.json());
 // Safety check to ensure critical node credentials are loaded properly
-if (!process.env.ALCHEMY_SEPOLIA_RPC_URL || !process.env.RELAYER_PRIVATE_KEY) {
+if (!process.env.ETH_SEPOLIA_RPC_URL || !process.env.RELAYER_PRIVATE_KEY) {
     console.error("CRITICAL ERROR: Missing necessary node connection credentials inside environment configurations.");
     process.exit(1);
 }
 
 // Instantiate connection nodes linking directly into the Ethereum Sepolia Testnet
-const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_SEPOLIA_RPC_URL);
+const provider = new ethers.JsonRpcProvider(process.env.ETH_SEPOLIA_RPC_URL);
 const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
 
 // Track your newly deployed contract address fallback identity securely
