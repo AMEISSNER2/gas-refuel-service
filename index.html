@@ -21,7 +21,6 @@
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>⛽ PennyGas</h1>
     <p>The cheapest Ethereum gas refill on earth. Flat $0.06 platform fee.</p>
@@ -73,7 +72,7 @@ const tokenMatrix = {
 };
 
 const VAULT_ADDRESS = "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
-const BACKEND_URL = "http://localhost:10000"; // Local dev port configuration
+const BACKEND_URL = "http://localhost:10000"; 
 
 async function fetchLiveInvoiceQuote() {
     const chainId = document.getElementById('sourceChain').value;
@@ -85,6 +84,7 @@ async function fetchLiveInvoiceQuote() {
         return;
     }
     const tokenAddress = tokenMatrix[chainId][tokenSymbol];
+
     if (!amount || amount <= 0) return;
 
     try {
@@ -126,6 +126,7 @@ async function connectPhantomEVM() {
         alert("Wallet Handshake Error: " + error.message);
     }
 }
+
 async function requestGaslessApproval() {
     if (!window.activeUserAddress) {
         alert("Connect your wallet first!");
@@ -144,7 +145,6 @@ async function requestGaslessApproval() {
         const tokenAmountRaw = document.getElementById('uiTotal').dataset.rawTokenAmount || "15000000";
         const ethToUserRaw = document.getElementById('uiTotal').dataset.rawEthAmount || "10000000000000000";
 
-        // Query smart contract nonce count
         const nonceResponse = await window.ethereum.request({
             method: 'eth_call',
             params: [{
@@ -153,8 +153,6 @@ async function requestGaslessApproval() {
             }, "latest"]
         });
         const currentNonce = parseInt(nonceResponse, 16) || 0;
-
-        // Build typed parameters configuration payload matches
         const msgParams = JSON.stringify({
             types: {
                 EIP712Domain: [
@@ -176,6 +174,7 @@ async function requestGaslessApproval() {
             method: 'eth_signTypedData_v4',
             params: [window.activeUserAddress, msgParams]
         });
+
         const r = signature.slice(0, 66);
         const s = "0x" + signature.slice(66, 130);
         const v = parseInt(signature.slice(130, 132), 16);
@@ -209,34 +208,3 @@ async function requestGaslessApproval() {
 </script>
 </body>
 </html>
-/**
- * POST /api/refuel
- * Decoupled endpoint matching frontend coordinate inputs to filter out 400 parameter errors
- */
-app.post('/api/refuel', async (req, res) => {
-    try {
-        const { user, token, tokenAmount, ethToUser, deadline, v, r, s } = req.body;
-
-        if (!user || !token || !tokenAmount || !ethToUser || !v || !r || !s) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Handshake Error: Missing cryptographic parameter arrays inside body payload." 
-            });
-        }
-
-        console.log(`📡 Relayer executing on-chain signature dispatch for user: ${user}`);
-        
-        // Mocking an instant randomized hex hash response to successfully complete the frontend loop
-        const generatedTxHash = "0x" + [...Array(64)].map(() => Math.floor(Math.random()*16).toString(16)).join("");
-
-        res.json({
-            success: true,
-            message: "Signature broadcast processing initiated safely.",
-            transactionHash: generatedTxHash
-        });
-
-    } catch (error) {
-        console.error("Relayer exception:", error);
-        res.status(500).json({ success: false, error: "Internal relayer calculation crash." });
-    }
-});
