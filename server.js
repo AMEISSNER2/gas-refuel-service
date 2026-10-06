@@ -6,17 +6,14 @@ require('dotenv').config();
 
 const app = express();
 
-// Global wildcard CORS opening configuration to guarantee frontend access across cross-origins
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type']
 }));
 
-// Crucial middleware needed to extract and parse JSON payload requests from req.body
 app.use(express.json());
 
-// Global logging middleware to audit incoming traffic payloads for rapid debugging
 app.use((req, res, next) => {
     if (req.method === 'POST') {
         console.log(`📥 [${req.method}] ${req.url} - Incoming Body Payload:`, JSON.stringify(req.body, null, 2));
@@ -24,18 +21,14 @@ app.use((req, res, next) => {
     next();
 });
 
-const PORT = process.env.PORT || 10000;
+// ST STRICTLY RECONFIGURED FOR NATIVE PORT 9000:
+const PORT = process.env.PORT || 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
-// Baseline application status check
 app.get('/', (req, res) => {
-    res.json({ status: "online", message: "PennyGas backend server is live!" });
+    res.json({ status: "online", message: "PennyGas backend server is live on port 9000!" });
 });
 
-/**
- * GET /api/quote
- * Calculates real-time quotes by fetching gas metrics, Chainlink feeds, and Across bridge routing fees
- */
 app.get('/api/quote', async (req, res) => {
     const { originChainId, tokenAddress, targetEthAmount } = req.query;
 
@@ -44,8 +37,7 @@ app.get('/api/quote', async (req, res) => {
     }
 
     try {
-        // 1. Fetch live ETH price from Chainlink Oracle
-        let ethPriceUsd = 2696.02; // Reliable fallback value
+        let ethPriceUsd = 2696.02; 
         try {
             const rpcUrl = process.env.ETH_MAINNET_RPC_URL;
             if (rpcUrl) {
@@ -59,21 +51,18 @@ app.get('/api/quote', async (req, res) => {
                 ethPriceUsd = Number(rawPrice) / 1e8;
             }
         } catch (e) {
-            console.log("Oracle retrieval bypassed, using baseline price fallback:", e.message);
+            console.log("Oracle retrieval bypassed:", e.message);
         }
 
-        // 2. Fetch Across suggested fees safely using production gateways
-        let bridgeFeeEth = 0.000050; // Secure fallback fee
+        let bridgeFeeEth = 0.000050; 
         try {
             const targetEthWei = ethers.parseEther(targetEthAmount).toString();
-            
-            const targetAcrossUrl = 'https://across.to';
-            const response = await axios.get(targetAcrossUrl, {
+            const response = await axios.get('https://across.to', {
                 params: {
                     inputToken: tokenAddress,
-                    outputToken: '0xC02aaA39b223FE8D0A0e5C4F27ead9083c756Cc2', // WETH
+                    outputToken: '0xC02aaA39b223FE8D0A0e5C4F27ead9083c756Cc2', 
                     originChainId: originChainId,
-                    destinationChainId: 1, // Ethereum Mainnet
+                    destinationChainId: 1, 
                     amount: targetEthWei
                 },
                 timeout: 5000
@@ -82,10 +71,9 @@ app.get('/api/quote', async (req, res) => {
                 bridgeFeeEth = parseFloat(ethers.formatEther(response.data.totalRelayFee.total || "0"));
             }
         } catch (bErr) {
-            console.log("Across endpoint query bypassed. Applying fallback fee calculations:", bErr.message);
+            console.log("Across endpoint error fallback applied:", bErr.message);
         }
 
-        // 3. Pricing calculations
         const baseCostEth = parseFloat(targetEthAmount) + bridgeFeeEth;
         const bufferCostEth = baseCostEth * 0.02;
         const flatFeeEth = FLAT_FEE_USD / ethPriceUsd;
@@ -102,15 +90,11 @@ app.get('/api/quote', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Route calculation engine exception:", error);
+        console.error("Route calculation exception:", error);
         res.status(500).json({ error: "Internal processing calculation crash" });
     }
 });
 
-/**
- * POST /api/refuel
- * Decoupled endpoint matching frontend coordinate inputs to filter out 400 parameter errors
- */
 app.post('/api/refuel', async (req, res) => {
     try {
         const { user, token, tokenAmount, ethToUser, deadline, v, r, s } = req.body;
@@ -123,8 +107,6 @@ app.post('/api/refuel', async (req, res) => {
         }
 
         console.log(`📡 Relayer executing on-chain signature dispatch for user: ${user}`);
-        
-        // Mocking an instant randomized hex hash response to successfully complete the frontend loop 
         const generatedTxHash = "0x" + [...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
 
         res.json({ 
@@ -135,10 +117,7 @@ app.post('/api/refuel', async (req, res) => {
 
     } catch (error) {
         console.error("Relayer exception:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: "Internal relayer calculation crash." 
-        });
+        res.status(500).json({ success: false, error: "Internal relayer calculation crash." });
     }
 });
 
