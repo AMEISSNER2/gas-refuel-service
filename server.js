@@ -21,12 +21,12 @@ app.use((req, res, next) => {
     next();
 });
 
-// ST STRICTLY RECONFIGURED FOR NATIVE PORT 9000:
-const PORT = process.env.PORT || 9000;
+// FORCED HARDCODED PORT 9000 (IGNORES CLOUD ENV OVERRIDES):
+const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
 app.get('/', (req, res) => {
-    res.json({ status: "online", message: "PennyGas backend server is live on port 9000!" });
+    res.json({ status: "online", message: "PennyGas backend server is strictly locked to port 9000!" });
 });
 
 app.get('/api/quote', async (req, res) => {
@@ -86,7 +86,9 @@ app.get('/api/quote', async (req, res) => {
             ourProfitUsd: FLAT_FEE_USD.toFixed(2),
             ourProfitEth: flatFeeEth.toFixed(6),
             totalInvoiceEth: finalInvoiceEth.toFixed(6),
-            currentEthPrice: ethPriceUsd.toFixed(2)
+            currentEthPrice: ethPriceUsd.toFixed(2),
+            rawTokenAmount: "15000000",
+            rawEthAmount: ethers.parseEther(finalInvoiceEth.toFixed(6)).toString()
         });
 
     } catch (error) {
@@ -122,5 +124,5 @@ app.post('/api/refuel', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`⛽ PennyGas Server online and actively listening on port ${PORT}`);
+    console.log(`⛽ PennyGas Server online and strictly listening on port ${PORT}`);
 });

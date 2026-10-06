@@ -72,7 +72,9 @@ const tokenMatrix = {
 };
 
 const VAULT_ADDRESS = "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
-const BACKEND_URL = "http://localhost:9000"; 
+
+// HARDCODED PORT 9000 ONLY:
+const BACKEND_URL = "http://127.0.0.1:9000"; 
 
 async function fetchLiveInvoiceQuote() {
     const chainId = document.getElementById('sourceChain').value;
