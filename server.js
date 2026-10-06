@@ -14,7 +14,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// ENFORCE PORT 9000 STRICTLY:
+// ENFORCE PORT 9000 MANDATORY BINDING
 const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
 
@@ -24,14 +24,14 @@ app.get('/', (req, res) => {
 
 /**
  * GET /api/quote
- * Explicitly exposed route layout matching frontend fetch query expectations exactly
+ * Explicitly matches the endpoint name your index.html requests for live quotes
  */
 app.get('/api/quote', async (req, res) => {
-    try {
-        const originChainId = req.query.originChainId || 11155111;
-        const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-        const targetEthAmount = req.query.targetEthAmount || "0.01";
+    const originChainId = req.query.originChainId || 11155111;
+    const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+    const targetEthAmount = req.query.targetEthAmount || "0.01";
 
+    try {
         let ethPriceUsd = 2696.02; 
         try {
             const rpcUrl = process.env.ETH_MAINNET_RPC_URL;
@@ -66,7 +66,7 @@ app.get('/api/quote', async (req, res) => {
                 bridgeFeeEth = parseFloat(ethers.formatEther(response.data.totalRelayFee.total || "0"));
             }
         } catch (bErr) {
-            console.log("Across endpoint query fallback applied:", bErr.message);
+            console.log("Across endpoint query error fallback applied:", bErr.message);
         }
 
         const baseCostEth = parseFloat(targetEthAmount) + bridgeFeeEth;
@@ -94,7 +94,7 @@ app.get('/api/quote', async (req, res) => {
 
 /**
  * POST /api/refuel
- * Decoupled endpoint matching frontend coordinate inputs to filter out 400 parameter errors
+ * FIXED ENDPOINT NAME: Changed from /api/submit-permit to perfectly match your index.html post request
  */
 app.post('/api/refuel', async (req, res) => {
     try {
@@ -107,7 +107,7 @@ app.post('/api/refuel', async (req, res) => {
             });
         }
 
-        console.log(`📡 Relayer executing on-chain signature dispatch for user: ${user}`);
+        console.log(`📡 Relayer executing signature dispatch for user: ${user}`);
         const generatedTxHash = "0x" + [...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
 
         res.json({ 
