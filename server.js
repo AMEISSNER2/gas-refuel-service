@@ -25,8 +25,8 @@ if (!process.env.ETH_SEPOLIA_RPC_URL || !process.env.RELAYER_PRIVATE_KEY) {
 // Instantiate connection nodes linking directly into the Ethereum Sepolia Testnet
 const provider = new ethers.JsonRpcProvider(process.env.ETH_SEPOLIA_RPC_URL);
 
-// FIXED SANITIZATION: Strips out accidental blank spaces or wrapping quotes cleanly
-let cleanPrivateKey = process.env.RELAYER_PRIVATE_KEY.trim().replace(/^["']|["']\$/g, "");
+// DEFINITIVE SANITIZATION: Completely strips out all accidental spaces, single quotes, or double quotes
+let cleanPrivateKey = process.env.RELAYER_PRIVATE_KEY.replace(/['"\s]/g, "");
 
 // Ensure it has the strict 0x prefix required by modern ethers v6 instances
 if (!cleanPrivateKey.startsWith("0x")) {
