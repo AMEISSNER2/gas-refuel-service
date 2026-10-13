@@ -15,14 +15,19 @@ app.use(cors({
 
 app.use(express.json());
 
+// ENFORCE PORT 9000 BINDING EXCLUSIVELY
 const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
+
+// Target On-Chain Vault Profile Definition
 const VAULT_ADDRESS = "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
 
+// Minimum standard human-readable ABI interface layout matching your deployed Solidity slot functions
 const VAULT_ABI = [
     "function refuel(address user, address token, uint256 amount, uint256 nonce, uint8 v, bytes32 r, bytes32 s) external returns (bool)"
 ];
 
+// Automatically serve your index.html assets directly on port 9000
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
@@ -31,13 +36,13 @@ app.get('/', (req, res) => {
 
 /**
  * GET /api/quote
- * Calculates real-time invoices and checks token address options
+ * Explicitly matches the endpoint name your index.html requests for live quotes
  */
 app.get('/api/quote', async (req, res) => {
     const originChainId = req.query.originChainId || "11155111";
-    // Defaults to USDC but accepts incoming token selection overrides (such as USDT)
     const tokenAddress = req.query.tokenAddress || "0x1c7D4B196CbC4B4bC7B181d743FBC6114a902379";
     const targetEthAmount = req.query.targetEthAmount || "0.01";
+    const userAddress = req.query.user || "0x0000000000000000000000000000000000000000";
 
     try {
         let ethPriceUsd = 2696.02; 
@@ -45,6 +50,8 @@ app.get('/api/quote', async (req, res) => {
             const rpcUrl = process.env.ETH_MAINNET_RPC_URL || process.env.SEPOLIA_RPC_URL;
             if (rpcUrl) {
                 const provider = new ethers.JsonRpcProvider(rpcUrl);
+                
+                // Fetch dynamic oracle price feed bounds
                 const priceFeedContract = new ethers.Contract(
                     "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
                     ["function latestAnswer() external view returns (int256)"],
@@ -104,36 +111,34 @@ app.get('/api/quote', async (req, res) => {
 
 /**
  * POST /api/refuel
- * Validates relayer gas thresholds before broadcasting transactions on-chain
+ * UNIFIED PRODUCTION ROUTER: Broadcasts real gasless meta-transactions directly on-chain
  */
 app.post('/api/refuel', async (req, res) => {
     try {
         const { user, token, tokenAmount, nonce, v, r, s } = req.body;
 
-        // FIXED: Removed the old 'ethToUser' condition so the payload clears validation flawlessly
+        // FIXED: Removed the old unused 'ethToUser' condition so validation passes flawlessly
         if (!user || !token || !tokenAmount || !v || !r || !s) {
             return res.status(400).json({ 
                 success: false, 
-                error: "Handshake Error: Missing parameters inside body payload." 
+                error: "Handshake Error: Missing cryptographic parameter arrays inside body payload." 
             });
         }
-        
-        // ... rest of your functioning contract broadcast code remains exactly the same
-
 
         const targetRpcUrl = process.env.SEPOLIA_RPC_URL; 
-        if (!targetRpcUrl) throw new Error("Missing network node RPC deployment URL inside configuration mapping.");
+        if (!targetRpcUrl) {
+            throw new Error("Missing network deployment provider mapping. Check active .env file configuration.");
+        }
         const provider = new ethers.JsonRpcProvider(targetRpcUrl);
 
         const relayerPrivateKey = process.env.RELAYER_PRIVATE_KEY;
-        if (!relayerPrivateKey) throw new Error("Missing Relayer Wallet Private Key configuration entry.");
+        if (!relayerPrivateKey) {
+            throw new Error("Missing relayer gas wallet injection baseline. Check private key variable bounds.");
+        }
         const relayerWallet = new ethers.Wallet(relayerPrivateKey, provider);
 
-        // 🛡️ PRE-FLIGHT GUARD: Validate Relayer Gas Balance
+        // Pre-flight validation of relayer gas reserves before committing execution to the node
         const relayerBalance = await provider.getBalance(relayerWallet.address);
-        console.log(`[Relayer Status] Sponsoring Gas Account Balance: ${ethers.formatEther(relayerBalance)} ETH`);
-        
-        // Refuse broadcast if balance dips below baseline threshold required for transaction execution
         if (relayerBalance < ethers.parseEther("0.005")) {
             return res.status(500).json({
                 success: false,
@@ -143,11 +148,19 @@ app.post('/api/refuel', async (req, res) => {
 
         const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, relayerWallet);
 
+        const cleanUser = ethers.getAddress(user);
+        const cleanToken = ethers.getAddress(token);
+        const uintAmount = BigInt(tokenAmount);
+        const uintNonce = BigInt(nonce || Math.floor(Date.now() / 1000));
+        
+        console.log(`📡 Relayer executing signature dispatch for user: ${cleanUser}`);
+
+        // Broadcast call directly to the chain provider
         const txResponse = await vaultContract.refuel(
-            ethers.getAddress(user),
-            ethers.getAddress(token),
-            BigInt(tokenAmount),
-            BigInt(nonce),
+            cleanUser,
+            cleanToken,
+            uintAmount,
+            uintNonce,
             parseInt(v, 10),
             ethers.zeroPadValue(r, 32),
             ethers.zeroPadValue(s, 32)
@@ -162,10 +175,10 @@ app.post('/api/refuel', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("🚨 On-Chain Execution Crash Exception:", error);
+        console.error("🚨 On-Chain Broadcast Execution Exception:", error);
         res.status(500).json({ 
             success: false, 
-            error: error.message || "Internal relayer processing error." 
+            error: error.message || "Internal relayer calculation or gas exhaustion crash." 
         });
     }
 });
