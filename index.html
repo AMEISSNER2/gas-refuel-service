@@ -57,7 +57,6 @@
         <label class="form-label">Payment Stablecoin Options</label>
         <select id="paymentTokenSelector" class="select-input">
             <option value="0x1c7D4B196CbC4B4bC7B181d743FBC6114a902379" selected>USDC (USD Coin)</option>
-            <!-- USDT integrated into our 6-decimal scaling engine framework -->
             <option value="0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0">USDT (Tether USD - Sepolia Target)</option>
         </select>
     </div>
@@ -153,21 +152,19 @@ async function connectAndSyncPennyGas() {
         const targetGasVal = document.getElementById("targetGasAmount").value;
         const tokenAddr = document.getElementById("paymentTokenSelector").value;
 
-        // 🛡️ CUSTOMER BALANCE GUARD: Verify customer has enough stablecoins beforehand
+        // Pre-Flight Customer Balance Guard Layout
         try {
-            // Standard ERC-20 balanceOf function selector hash
             const balanceOfData = "0x70a08231" + window.pennyGasState.userAddress.substring(2).padStart(64, '0');
             const tokenBalanceHex = await window.pennyGasState.provider.request({
                 method: "eth_call",
                 params: [{ to: tokenAddr, data: balanceOfData }, "latest"]
             });
             
-            // Format 6-decimal token balances correctly
             const tokenBalanceRaw = parseInt(tokenBalanceHex, 16) || 0;
             console.log(`[Piece 5] Customer Stablecoin Units Available: ${tokenBalanceRaw}`);
             
-            if (tokenBalanceRaw < 100000) { // Threshold: 0.10 stablecoin units baseline
-                throw new Error("Customer Account Deficit: You do not have enough stablecoins (USDC/USDT) to cover this transaction invoice.");
+            if (tokenBalanceRaw < 100000) { 
+                throw new Error("Account Deficit: You do not have enough stablecoins (USDC/USDT) to cover this transaction invoice.");
             }
         } catch (balError) {
             console.warn("Pre-flight user balance evaluation bypassed or returned warning:", balError.message);
@@ -279,7 +276,6 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
         const relayerData = await relayerResponse.json();
 
         if (relayerData && relayerData.success) {
-            // Dynamic explorer configuration mapping based on active chain selections
             const explorerBase = (parsedChainIdDecimal === 11155111) 
                 ? "https://etherscan.io" 
                 : "https://etherscan.io";
