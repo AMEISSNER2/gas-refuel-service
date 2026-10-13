@@ -15,19 +15,14 @@ app.use(cors({
 
 app.use(express.json());
 
-// ENFORCE PORT 9000 BINDING EXCLUSIVELY
 const PORT = 9000;
 const FLAT_FEE_USD = parseFloat(process.env.SERVICE_FLAT_FEE_USD) || 0.06;
-
-// Target On-Chain Vault Profile Definition
 const VAULT_ADDRESS = "0x51DC9E51e9F1216075E58E6F7045C4F17965d21C";
 
-// Minimum standard human-readable ABI interface layout matching your deployed Solidity slot functions
 const VAULT_ABI = [
     "function refuel(address user, address token, uint256 amount, uint256 nonce, uint8 v, bytes32 r, bytes32 s) external returns (bool)"
 ];
 
-// Automatically serve your index.html assets directly on port 9000
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
@@ -36,25 +31,20 @@ app.get('/', (req, res) => {
 
 /**
  * GET /api/quote
- * Explicitly matches the endpoint name your index.html requests for live quotes
+ * Calculates real-time invoices and checks token address options
  */
 app.get('/api/quote', async (req, res) => {
     const originChainId = req.query.originChainId || "11155111";
+    // Defaults to USDC but accepts incoming token selection overrides (such as USDT)
     const tokenAddress = req.query.tokenAddress || "0x1c7D4B196CbC4B4bC7B181d743FBC6114a902379";
     const targetEthAmount = req.query.targetEthAmount || "0.01";
-    const userAddress = req.query.user || "0x0000000000000000000000000000000000000000";
 
     try {
         let ethPriceUsd = 2696.02; 
-        let currentNonceValue = Math.floor(Date.now() / 1000); // Default dynamic fallback tracking matrix
-
-        // Safe query sequence to pull structural contract nonces natively from active RPCs
         try {
             const rpcUrl = process.env.ETH_MAINNET_RPC_URL || process.env.SEPOLIA_RPC_URL;
             if (rpcUrl) {
                 const provider = new ethers.JsonRpcProvider(rpcUrl);
-                
-                // Fetch dynamic oracle price feed bounds
                 const priceFeedContract = new ethers.Contract(
                     "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
                     ["function latestAnswer() external view returns (int256)"],
@@ -100,7 +90,7 @@ app.get('/api/quote', async (req, res) => {
             ourProfitEth: flatFeeEth.toFixed(6),
             totalInvoiceEth: finalInvoiceEth.toFixed(6),
             currentEthPrice: ethPriceUsd.toFixed(2),
-            nonce: currentNonceValue, 
+            nonce: Math.floor(Date.now() / 1000), 
             vault: VAULT_ADDRESS,
             rawTokenAmount: "15000000",
             rawEthAmount: ethers.parseEther(finalInvoiceEth.toFixed(6)).toString()
@@ -114,63 +104,53 @@ app.get('/api/quote', async (req, res) => {
 
 /**
  * POST /api/refuel
- * UNIFIED PRODUCTION ROUTEER: Broadcasts real gasless meta-transactions directly on-chain
+ * Validates relayer gas thresholds before broadcasting transactions on-chain
  */
 app.post('/api/refuel', async (req, res) => {
     try {
         const { user, token, tokenAmount, nonce, v, r, s } = req.body;
 
-        // Perform rigorous structural null type validation controls upfront
         if (!user || !token || !tokenAmount || !v || !r || !s) {
             return res.status(400).json({ 
                 success: false, 
-                error: "Handshake Error: Missing cryptographic parameter arrays inside body payload." 
+                error: "Handshake Error: Missing parameters inside body payload." 
             });
         }
 
-        console.log(`📡 Relayer executing signature dispatch for user: ${user}`);
-
-        // 1. Initialize Network RPC Provider Connection
         const targetRpcUrl = process.env.SEPOLIA_RPC_URL; 
-        if (!targetRpcUrl) {
-            throw new Error("Missing network deployment provider mapping. Check active .env file configuration.");
-        }
+        if (!targetRpcUrl) throw new Error("Missing network node RPC deployment URL inside configuration mapping.");
         const provider = new ethers.JsonRpcProvider(targetRpcUrl);
 
-        // 2. Initialize Relayer Sponsor Key Signer 
         const relayerPrivateKey = process.env.RELAYER_PRIVATE_KEY;
-        if (!relayerPrivateKey) {
-            throw new Error("Missing relayer gas wallet injection baseline. Check private key variable bounds.");
-        }
+        if (!relayerPrivateKey) throw new Error("Missing Relayer Wallet Private Key configuration entry.");
         const relayerWallet = new ethers.Wallet(relayerPrivateKey, provider);
-        console.log(`💳 Sponsor Gas Account loaded: ${relayerWallet.address}`);
 
-        // 3. Connect Smart Contract Target
+        // 🛡️ PRE-FLIGHT GUARD: Validate Relayer Gas Balance
+        const relayerBalance = await provider.getBalance(relayerWallet.address);
+        console.log(`[Relayer Status] Sponsoring Gas Account Balance: ${ethers.formatEther(relayerBalance)} ETH`);
+        
+        // Refuse broadcast if balance dips below baseline threshold required for transaction execution
+        if (relayerBalance < ethers.parseEther("0.005")) {
+            return res.status(500).json({
+                success: false,
+                error: "Sponsor Wallet Deficit: The relayer does not have enough native ETH gas to clear on-chain mining fees."
+            });
+        }
+
         const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, relayerWallet);
 
-        // 4. Force Defensive Type Clean Casting matching Solidity expectations
-        const cleanUser = ethers.getAddress(user);
-        const cleanToken = ethers.getAddress(token);
-        const uintAmount = BigInt(tokenAmount);
-        const uintNonce = BigInt(nonce || Math.floor(Date.now() / 1000));
-        
-        console.log(`📦 Packaging Contract Parameters -> User: ${cleanUser}, Units: ${uintAmount}, Nonce: ${uintNonce}`);
-
-        // 5. Broadcast call directly to the chain provider
-        // This transaction is executed and paid for by the sponsor key wallet, achieving gasless abstraction
         const txResponse = await vaultContract.refuel(
-            cleanUser,
-            cleanToken,
-            uintAmount,
-            uintNonce,
+            ethers.getAddress(user),
+            ethers.getAddress(token),
+            BigInt(tokenAmount),
+            BigInt(nonce),
             parseInt(v, 10),
             ethers.zeroPadValue(r, 32),
             ethers.zeroPadValue(s, 32)
         );
 
-        console.log(`🚀 Transaction broadcast success! Hex: ${txResponse.hash}`);
+        console.log(`🚀 Real Transaction successfully broadcasted! Hash: ${txResponse.hash}`);
 
-        // Return live verification variables back to the front-panel script
         res.json({ 
             success: true, 
             message: "Signature broadcast processing initiated safely.", 
@@ -178,10 +158,10 @@ app.post('/api/refuel', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("🚨 On-Chain Broadcast Execution Exception:", error);
+        console.error("🚨 On-Chain Execution Crash Exception:", error);
         res.status(500).json({ 
             success: false, 
-            error: error.message || "Internal relayer calculation or gas exhaustion crash." 
+            error: error.message || "Internal relayer processing error." 
         });
     }
 });

@@ -34,6 +34,7 @@
         .status-banner { margin-top: 16px; padding: 12px; border-radius: 6px; font-size: 13px; text-align: center; display: none; word-break: break-all; }
         .status-banner.error { background: rgba(255,60,48,0.1); border: 1px solid var(--error-red); color: var(--error-red); }
         .status-banner.success { background: rgba(0,230,118,0.1); border: 1px solid var(--accent-green); color: var(--accent-green); }
+        .explorer-link { color: var(--accent-green); font-weight: 600; text-decoration: underline; margin-top: 6px; display: block; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -53,9 +54,11 @@
     </div>
 
     <div class="form-group">
-        <label class="form-label">Payment Token</label>
+        <label class="form-label">Payment Stablecoin Options</label>
         <select id="paymentTokenSelector" class="select-input">
-            <option value="0x1c7D4B196CbC4B4bC7B181d743FBC6114a902379" selected>USDC (Stablecoin)</option>
+            <option value="0x1c7D4B196CbC4B4bC7B181d743FBC6114a902379" selected>USDC (USD Coin)</option>
+            <!-- USDT integrated into our 6-decimal scaling engine framework -->
+            <option value="0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0">USDT (Tether USD - Sepolia Target)</option>
         </select>
     </div>
 
@@ -87,9 +90,11 @@ window.pennyGasQuotes = {
     init: function() {
         const gasInput = document.getElementById("targetGasAmount");
         const chainSelect = document.getElementById("originChainSelector");
+        const tokenSelect = document.getElementById("paymentTokenSelector");
         
         if (gasInput) gasInput.addEventListener("input", () => this.executeCalculation());
         if (chainSelect) chainSelect.addEventListener("change", () => this.executeCalculation());
+        if (tokenSelect) tokenSelect.addEventListener("change", () => this.executeCalculation());
         
         this.executeCalculation();
     },
@@ -127,6 +132,7 @@ async function connectAndSyncPennyGas() {
     const errorBanner = document.getElementById("handshakeErrorBanner");
     errorBanner.style.display = "none";
     errorBanner.innerText = "";
+    errorBanner.className = "status-banner error";
 
     try {
         if (window.phantom?.ethereum) {
@@ -141,11 +147,32 @@ async function connectAndSyncPennyGas() {
         if (!accounts || accounts.length === 0) throw new Error("No available accounts returned.");
 
         window.pennyGasState.userAddress = Array.isArray(accounts) ? String(accounts).toLowerCase().trim() : String(accounts).toLowerCase().trim();
-        console.log(`[Piece 5] Sanitized Connected Address: ${window.pennyGasState.userAddress}`);
+        console.log(`[Piece 5] Connected Address: ${window.pennyGasState.userAddress}`);
 
         const selectedChain = document.getElementById("originChainSelector").value;
         const targetGasVal = document.getElementById("targetGasAmount").value;
         const tokenAddr = document.getElementById("paymentTokenSelector").value;
+
+        // 🛡️ CUSTOMER BALANCE GUARD: Verify customer has enough stablecoins beforehand
+        try {
+            // Standard ERC-20 balanceOf function selector hash
+            const balanceOfData = "0x70a08231" + window.pennyGasState.userAddress.substring(2).padStart(64, '0');
+            const tokenBalanceHex = await window.pennyGasState.provider.request({
+                method: "eth_call",
+                params: [{ to: tokenAddr, data: balanceOfData }, "latest"]
+            });
+            
+            // Format 6-decimal token balances correctly
+            const tokenBalanceRaw = parseInt(tokenBalanceHex, 16) || 0;
+            console.log(`[Piece 5] Customer Stablecoin Units Available: ${tokenBalanceRaw}`);
+            
+            if (tokenBalanceRaw < 100000) { // Threshold: 0.10 stablecoin units baseline
+                throw new Error("Customer Account Deficit: You do not have enough stablecoins (USDC/USDT) to cover this transaction invoice.");
+            }
+        } catch (balError) {
+            console.warn("Pre-flight user balance evaluation bypassed or returned warning:", balError.message);
+            if (balError.message.includes("Account Deficit")) throw balError;
+        }
 
         try {
             const response = await fetch(`/api/quote?originChainId=${selectedChain}&tokenAddress=${tokenAddr}&targetEthAmount=${targetGasVal}&user=${window.pennyGasState.userAddress}&vault=${window.pennyGasState.vaultAddress}`);
@@ -153,9 +180,7 @@ async function connectAndSyncPennyGas() {
             
             const data = await response.json();
             window.pennyGasState.currentNonce = (data && typeof data.nonce !== 'undefined') ? parseInt(data.nonce, 10) : Math.floor(Date.now() / 1000);
-            console.log(`[Piece 5] Nonce Matrix Synced: ${window.pennyGasState.currentNonce}`);
         } catch (fetchErr) {
-            console.warn("[Piece 5] Nonce query error. Applying fallback index sequence...");
             window.pennyGasState.currentNonce = Math.floor(Date.now() / 1000);
         }
 
@@ -221,39 +246,25 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             message: message
         });
 
-        console.log("[Piece 6] Launching signature pop layout via JSON schema format...");
-
         const signature = await window.pennyGasState.provider.request({
             method: "eth_signTypedData_v4",
             params: [cleanUserAddress, msgParamsData]
         });
 
-        console.log(`[Piece 6] Live Gasless Signature Obtained: ${signature}`);
-
-        // ==========================================================================
-        // ⚡ EFFICIENCY METRIC: HIGH PERFORMANCE FRONTEND SIGNATURE SLICING LOGIC
-        // ==========================================================================
-        // Low-overhead byte parsing to extract ECDSA scalar parameters instantly
         const r = signature.substring(0, 66);
         const s = "0x" + signature.substring(66, 130);
         let v = parseInt(signature.substring(130, 132), 16);
-        if (v < 27) v += 27; // Formats standard v parameter indices defensively
+        if (v < 27) v += 27;
 
-        console.log(`[Piece 6] Signature Sliced -> r: ${r}, s: ${s}, v: ${v}`);
-
-        // ==========================================================================
-        // 📡 RELAYER TRANSMISSION ENGINE: Forward directly to node backend endpoint
-        // ==========================================================================
         errorBanner.className = "status-banner success";
-        errorBanner.innerText = "⏳ Broadcasting signature data arrays to relayer pipeline...";
+        errorBanner.innerText = "⏳ Broadcasting signature coordinates to relayer...";
         errorBanner.style.display = "block";
 
         const refuelPayload = {
             user: cleanUserAddress,
             token: cleanTokenAddress,
             tokenAmount: String(rawAmountValue),
-            ethToUser: String(calculatedUnits), 
-            deadline: String(Math.floor(Date.now() / 1000) + 3600), // Valid for 1 Hour
+            nonce: String(fixedNonceValue),
             v: v,
             r: r,
             s: s
@@ -268,13 +279,18 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
         const relayerData = await relayerResponse.json();
 
         if (relayerData && relayerData.success) {
-            errorBanner.innerText = `🎉 Authorized! Relayer TX Hash: ${relayerData.transactionHash}`;
+            // Dynamic explorer configuration mapping based on active chain selections
+            const explorerBase = (parsedChainIdDecimal === 11155111) 
+                ? "https://etherscan.io" 
+                : "https://etherscan.io";
+                
+            errorBanner.innerHTML = `🎉 Authorized! Refuel Successful.<br><a class="explorer-link" href="${explorerBase}${relayerData.transactionHash}" target="_blank">Click Here to View Etherscan Broadcast Status</a>`;
         } else {
-            throw new Error(relayerData.error || "Relayer refused execution mapping pipeline.");
+            throw new Error(relayerData.error || "Relayer execution rejection.");
         }
 
     } catch (sigError) {
-        console.error("[Piece 6] Cryptographic signature call aborted:", sigError);
+        console.error("[Piece 6] Pipeline aborted:", sigError);
         errorBanner.className = "status-banner error";
         errorBanner.innerText = `❌ Pipeline Error: ${sigError.message || "Request dropped."}`;
         errorBanner.style.display = "block";
