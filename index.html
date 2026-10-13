@@ -178,20 +178,24 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
         const cleanTokenAddress = String(tokenAddress).trim().toLowerCase();
         const cleanVaultAddress = String(window.pennyGasState.vaultAddress).trim().toLowerCase();
         
-        // TYPE IMMUNITY FIX: Force explicit Hex formatting on the domain chainId parameter
-        // This converts decimal representations (e.g. 11155111) straight into clear hex strings ("0xaa36a7")
-        // This completely bypasses the data validation traps inside minified evmAsk.js
+        // Formats chain ID precisely as an integer to support direct schema validation
         const parsedChainIdDecimal = parseInt(chainId, 10);
-        const hexChainId = "0x" + parsedChainIdDecimal.toString(16);
 
         const domain = {
             name: "PennyGasRefuel",
             version: "1",
-            chainId: hexChainId, 
+            chainId: parsedChainIdDecimal, 
             verifyingContract: cleanVaultAddress
         };
 
+        // Explicitly defines standard data fields required by the signature verification logic
         const types = {
+            EIP712Domain: [
+                { name: "name", type: "string" },
+                { name: "version", type: "string" },
+                { name: "chainId", type: "uint256" },
+                { name: "verifyingContract", type: "address" }
+            ],
             RefuelOrder: [
                 { name: "user", type: "address" },
                 { name: "token", type: "address" },
@@ -202,8 +206,10 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
 
         const parsedAmountNum = parseFloat(amount) || 0.01;
         const calculatedUnits = Math.round(parsedAmountNum * 1000000);
-        const rawAmountValue = String(calculatedUnits); 
-        const fixedNonceValue = String(window.pennyGasState.currentNonce);
+        
+        // Coerces types to exact values for compliance with the application network requirements
+        const rawAmountValue = parsedAmountNum <= 0.1 ? calculatedUnits : calculatedUnits; 
+        const fixedNonceValue = parseInt(window.pennyGasState.currentNonce, 10);
 
         const message = {
             user: cleanUserAddress,
@@ -212,15 +218,15 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             nonce: fixedNonceValue
         };
 
-        // Standardized data parameter schema structure wrapping parameters safely
-        const msgParamsData = {
+        // Combines blocks into standard layout accepted by standard extensions
+        const msgParamsData = JSON.stringify({
             domain: domain,
             types: types,
             primaryType: "RefuelOrder",
             message: message
-        };
+        });
 
-        console.log("[Piece 6] Transmitting object payload blueprint with hex formatting to Phantom:", message);
+        console.log("[Piece 6] Handing standardized JSON string payload to provider interface...");
 
         // Dispatches signature payload straight to the extension provider wrapper
         const signature = await window.pennyGasState.provider.request({
