@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
  */
 app.get('/api/quote', async (req, res) => {
     // Intercept both the correct spelling and the frontend's typo "orieinChainId"
-    const originChainId = req.query.originChainId || req.query.orieinChainId || 11155111;
+    const originChainId = req.query.originChainId || req.query.originChainId || 11155111;
     const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
     const targetEthAmount = req.query.targetEthAmount || "0.01";
 
