@@ -31,8 +31,8 @@ app.get('/', (req, res) => {
  * Explicitly matches the endpoint name your index.html requests for live quotes
  */
 app.get('/api/quote', async (req, res) => {
-    // Intercept both the correct spelling and the frontend's typo "orieinChainId"
-    const originChainId = req.query.originChainId || req.query.originChainId || 11155111;
+    // FIXED: Cleaned spelling tracking to look for the proper variable target exclusively
+    const originChainId = req.query.originChainId || "11155111";
     const tokenAddress = req.query.tokenAddress || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
     const targetEthAmount = req.query.targetEthAmount || "0.01";
 
