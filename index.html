@@ -177,8 +177,6 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
         const cleanUserAddress = String(window.pennyGasState.userAddress).trim().toLowerCase();
         const cleanTokenAddress = String(tokenAddress).trim().toLowerCase();
         const cleanVaultAddress = String(window.pennyGasState.vaultAddress).trim().toLowerCase();
-        
-        // Formats chain ID precisely as an integer to support direct schema validation
         const parsedChainIdDecimal = parseInt(chainId, 10);
 
         const domain = {
@@ -188,7 +186,6 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             verifyingContract: cleanVaultAddress
         };
 
-        // Explicitly defines standard data fields required by the signature verification logic
         const types = {
             EIP712Domain: [
                 { name: "name", type: "string" },
@@ -207,8 +204,7 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
         const parsedAmountNum = parseFloat(amount) || 0.01;
         const calculatedUnits = Math.round(parsedAmountNum * 1000000);
         
-        // Coerces types to exact values for compliance with the application network requirements
-        const rawAmountValue = parsedAmountNum <= 0.1 ? calculatedUnits : calculatedUnits; 
+        const rawAmountValue = calculatedUnits; 
         const fixedNonceValue = parseInt(window.pennyGasState.currentNonce, 10);
 
         const message = {
@@ -218,7 +214,6 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             nonce: fixedNonceValue
         };
 
-        // Combines blocks into standard layout accepted by standard extensions
         const msgParamsData = JSON.stringify({
             domain: domain,
             types: types,
@@ -226,23 +221,62 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             message: message
         });
 
-        console.log("[Piece 6] Handing standardized JSON string payload to provider interface...");
+        console.log("[Piece 6] Launching signature pop layout via JSON schema format...");
 
-        // Dispatches signature payload straight to the extension provider wrapper
         const signature = await window.pennyGasState.provider.request({
             method: "eth_signTypedData_v4",
             params: [cleanUserAddress, msgParamsData]
         });
 
-        console.log(`[Piece 6] Gasless Signature Extracted: ${signature}`);
-        
+        console.log(`[Piece 6] Live Gasless Signature Obtained: ${signature}`);
+
+        // ==========================================================================
+        // ⚡ EFFICIENCY METRIC: HIGH PERFORMANCE FRONTEND SIGNATURE SLICING LOGIC
+        // ==========================================================================
+        // Low-overhead byte parsing to extract ECDSA scalar parameters instantly
+        const r = signature.substring(0, 66);
+        const s = "0x" + signature.substring(66, 130);
+        let v = parseInt(signature.substring(130, 132), 16);
+        if (v < 27) v += 27; // Formats standard v parameter indices defensively
+
+        console.log(`[Piece 6] Signature Sliced -> r: ${r}, s: ${s}, v: ${v}`);
+
+        // ==========================================================================
+        // 📡 RELAYER TRANSMISSION ENGINE: Forward directly to node backend endpoint
+        // ==========================================================================
         errorBanner.className = "status-banner success";
-        errorBanner.innerText = "🚀 Relayer handshake complete! Refuel transaction authorized.";
+        errorBanner.innerText = "⏳ Broadcasting signature data arrays to relayer pipeline...";
         errorBanner.style.display = "block";
+
+        const refuelPayload = {
+            user: cleanUserAddress,
+            token: cleanTokenAddress,
+            tokenAmount: String(rawAmountValue),
+            ethToUser: String(calculatedUnits), 
+            deadline: String(Math.floor(Date.now() / 1000) + 3600), // Valid for 1 Hour
+            v: v,
+            r: r,
+            s: s
+        };
+
+        const relayerResponse = await fetch('/api/refuel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(refuelPayload)
+        });
+
+        const relayerData = await relayerResponse.json();
+
+        if (relayerData && relayerData.success) {
+            errorBanner.innerText = `🎉 Authorized! Relayer TX Hash: ${relayerData.transactionHash}`;
+        } else {
+            throw new Error(relayerData.error || "Relayer refused execution mapping pipeline.");
+        }
 
     } catch (sigError) {
         console.error("[Piece 6] Cryptographic signature call aborted:", sigError);
-        errorBanner.innerText = `❌ Signature Error: ${sigError.message || "Wallet request rejected."}`;
+        errorBanner.className = "status-banner error";
+        errorBanner.innerText = `❌ Pipeline Error: ${sigError.message || "Request dropped."}`;
         errorBanner.style.display = "block";
     }
 }
