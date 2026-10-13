@@ -140,21 +140,18 @@ async function connectAndSyncPennyGas() {
         const accounts = await window.pennyGasState.provider.request({ method: 'eth_requestAccounts' });
         if (!accounts || accounts.length === 0) throw new Error("No available accounts returned.");
 
-        // Clean account primitives to prevent array embedding bugs
         window.pennyGasState.userAddress = Array.isArray(accounts) ? String(accounts[0]).toLowerCase().trim() : String(accounts).toLowerCase().trim();
-        console.log(`[Piece 5] Sanitized Address: ${window.pennyGasState.userAddress}`);
+        console.log(`[Piece 5] Sanitized Connected Address: ${window.pennyGasState.userAddress}`);
 
         const selectedChain = document.getElementById("originChainSelector").value;
         const targetGasVal = document.getElementById("targetGasAmount").value;
         const tokenAddr = document.getElementById("paymentTokenSelector").value;
 
         try {
-            // FIXED: Clean originChainId parameter layout matching your updated server.js
             const response = await fetch(`/api/quote?originChainId=${selectedChain}&tokenAddress=${tokenAddr}&targetEthAmount=${targetGasVal}&user=${window.pennyGasState.userAddress}&vault=${window.pennyGasState.vaultAddress}`);
             if (!response.ok) throw new Error("Backend query endpoint returned error state.");
             
             const data = await response.json();
-            // Assign integer block baseline or drop to fallback handling
             window.pennyGasState.currentNonce = (data && typeof data.nonce !== 'undefined') ? parseInt(data.nonce, 10) : Math.floor(Date.now() / 1000);
             console.log(`[Piece 5] Nonce Matrix Synced: ${window.pennyGasState.currentNonce}`);
         } catch (fetchErr) {
@@ -177,7 +174,6 @@ async function connectAndSyncPennyGas() {
 async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
     const errorBanner = document.getElementById("handshakeErrorBanner");
     try {
-        // FIXED TYPE SYSTEM: Enforce string primitives for address, explicit integers for chainId
         const cleanUserAddress = String(window.pennyGasState.userAddress).trim().toLowerCase();
         const cleanTokenAddress = String(tokenAddress).trim().toLowerCase();
         const cleanVaultAddress = String(window.pennyGasState.vaultAddress).trim().toLowerCase();
@@ -199,8 +195,9 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             ]
         };
 
-        // Enforce integer unit strings to prevent Uint8Array minified parser crashes
-        const rawAmountValue = String(15000000); 
+        const parsedAmountNum = parseFloat(amount) || 0.01;
+        const calculatedUnits = Math.round(parsedAmountNum * 1000000);
+        const rawAmountValue = String(calculatedUnits); 
         const fixedNonceValue = String(window.pennyGasState.currentNonce);
 
         const message = {
@@ -217,7 +214,7 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             message: message
         });
 
-        console.log("[Piece 6] Transmitting verified payload parameter layout to evmMask layer:", message);
+        console.log("[Piece 6] Transmitting verified payload layout to Phantom extension:", message);
 
         const signature = await window.pennyGasState.provider.request({
             method: "eth_signTypedData_v4",
@@ -232,7 +229,8 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
 
     } catch (sigError) {
         console.error("[Piece 6] Cryptographic signature call aborted:", sigError);
-        throw new Error(sigError.message || "Primary wallet signature request rejected.");
+        errorBanner.innerText = `❌ Signature Error: ${sigError.message || "Wallet request rejected."}`;
+        errorBanner.style.display = "block";
     }
 }
 
