@@ -140,7 +140,7 @@ async function connectAndSyncPennyGas() {
         const accounts = await window.pennyGasState.provider.request({ method: 'eth_requestAccounts' });
         if (!accounts || accounts.length === 0) throw new Error("No available accounts returned.");
 
-        window.pennyGasState.userAddress = Array.isArray(accounts) ? String(accounts[0]).toLowerCase().trim() : String(accounts).toLowerCase().trim();
+        window.pennyGasState.userAddress = Array.isArray(accounts) ? String(accounts).toLowerCase().trim() : String(accounts).toLowerCase().trim();
         console.log(`[Piece 5] Sanitized Connected Address: ${window.pennyGasState.userAddress}`);
 
         const selectedChain = document.getElementById("originChainSelector").value;
@@ -207,18 +207,20 @@ async function executeEIP712SignatureMatrix(chainId, tokenAddress, amount) {
             nonce: fixedNonceValue
         };
 
-        const msgParams = JSON.stringify({
+        // FIXED: Kept as a pure live Object to satisfy the extension type validator
+        const msgParamsData = {
             domain: domain,
             types: types,
             primaryType: "RefuelOrder",
             message: message
-        });
+        };
 
-        console.log("[Piece 6] Transmitting verified payload layout to Phantom extension:", message);
+        console.log("[Piece 6] Transmitting typed object parameter mapping to Phantom provider:", message);
 
+        // FIXED: Passing raw data object inside array parameters wrapper instead of stringified json
         const signature = await window.pennyGasState.provider.request({
             method: "eth_signTypedData_v4",
-            params: [cleanUserAddress, msgParams]
+            params: [cleanUserAddress, msgParamsData]
         });
 
         console.log(`[Piece 6] Gasless Signature Extracted: ${signature}`);
